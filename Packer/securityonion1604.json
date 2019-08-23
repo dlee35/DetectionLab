@@ -81,6 +81,7 @@
         "headless": false,
         "ssh_username": "{{user `ssh_username`}}",
         "ssh_password": "{{user `ssh_password`}}",
+        "ssh_wait_timeout": "10000s",
         "shutdown_timeout": "2h",
         "shutdown_command": "echo 'vagrant'|sudo -S shutdown -P now",
         "guest_os_type": "Ubuntu_64",
@@ -114,7 +115,7 @@
       "type": "vagrant",
       "keep_input_artifact": false,
       "compression_level": "8",
-      "output": "Boxes/securityonion_1604_{{.Provider}}.box",
+      "output": "../Boxes/securityonion_1604_{{.Provider}}.box",
       "vagrantfile_template": "vagrantfile-securityonion_1604.template"
     }],
     "variables": {
