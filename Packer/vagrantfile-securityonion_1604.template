@@ -7,7 +7,6 @@ Vagrant.configure("2") do |config|
   config.vm.define "vagrant-securityonion-1604"
   config.vm.box = "securityonion_1604"
   config.vm.hostname = "securityonion"
-  config.vm.network :private_network, :dhcp
 
   config.vm.provider :virtualbox do |v, override|
     v.gui = true
@@ -18,6 +17,17 @@ Vagrant.configure("2") do |config|
     v.customize ["modifyvm", :id, "--nicpromisc2", "allow-all"]
     #v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
     #v.customize ["modifyvm", :id, "--ioapic", "on"]
+  end
+
+  config.vm.provider :vmware_desktop do |v, override|
+    v.gui = true
+    v.vmx["memsize"] = "8192"
+    v.vmx["numvcpus"] = "4"
+    v.vmx["ethernet0.virtualDev"] = "vmxnet3"
+    v.vmx["RemoteDisplay.vnc.enabled"] = "false"
+    v.vmx["RemoteDisplay.vnc.port"] = "5900"
+    v.vmx["scsi0.virtualDev"] = "lsisas1068"
+    v.enable_vmrun_ip_lookup = false
   end
 
   config.vm.provider :vmware_fusion do |v, override|
@@ -37,17 +47,6 @@ Vagrant.configure("2") do |config|
     v.vmx["sound.startconnected"] = "FALSE"
     v.vmx["sound.present"] = "FALSE"
     v.vmx["sound.autodetect"] = "TRUE"
-    v.enable_vmrun_ip_lookup = false
-  end
-
-  config.vm.provider :vmware_workstation do |v, override|
-    v.gui = true
-    v.vmx["memsize"] = "8192"
-    v.vmx["numvcpus"] = "4"
-    v.vmx["ethernet0.virtualDev"] = "vmxnet3"
-    v.vmx["RemoteDisplay.vnc.enabled"] = "false"
-    v.vmx["RemoteDisplay.vnc.port"] = "5900"
-    v.vmx["scsi0.virtualDev"] = "lsisas1068"
     v.enable_vmrun_ip_lookup = false
   end
 end

@@ -40,11 +40,12 @@ Vagrant.configure("2") do |config|
   end
 
   config.vm.define "soanalyst01" do |cfg|
-    cfg.vm.box = "dlee35/securityonion"
+    cfg.vm.box = "file://../Boxes/securityonion_1604_virtualbox.box"
+    #cfg.vm.box = "dlee35/securityonion"
     #cfg.vm.box_version = "16.04.6.1"
     cfg.vm.hostname = "soanalyst01"
     cfg.vm.provision :shell, path: "scripts/securityonion-setup.sh"
-    config.vm.provision "reload"
+    cfg.vm.provision "reload"
 
     cfg.vm.provider "vmware_desktop" do |v, override|
       override.vm.synced_folder ".", "/vagrant", type: "rsync"
