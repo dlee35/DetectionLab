@@ -1,0 +1,125 @@
+{
+    "builders": [
+      {
+      "type": "vmware-iso",
+      "boot_command": [
+          "<leftSuper><wait5>",
+          "i<wait>n<wait>s<wait>t<wait>a<wait>l<wait>l<wait>",
+          "<enter><wait10>",
+          "<enter><wait5>",
+          "<enter><wait5>",
+          "<tab><wait><down><wait><spacebar><wait>",
+          "<tab><wait><tab><wait><tab><wait><enter><wait5>",
+          "<tab><wait><enter><wait5>",
+          "<enter><wait10>",
+          "<enter><wait10>",
+          "v<wait>a<wait>g<wait>r<wait>a<wait>n<wait>t<tab><wait>",
+          "securityonion<tab><wait><tab><wait>",
+          "v<wait>a<wait>g<wait>r<wait>a<wait>n<wait>t<tab><wait>",
+          "v<wait>a<wait>g<wait>r<wait>a<wait>n<wait>t<tab><wait>",
+          "<tab><wait><tab><wait><tab><wait5>",
+          "<enter><wait5m>",
+          "<tab><wait><tab><wait><enter><wait30>",
+          "<enter><wait1m>"
+      ],
+      "boot_wait": "2m30s",
+      "vm_name": "packer-securityonion-16.04.1-amd64",
+      "iso_url": "{{user `iso_urls`}}",
+      "iso_checksum_type": "{{user `iso_checksum_type`}}",
+      "iso_checksum": "{{user `iso_checksum`}}",
+      "headless": false,
+      "ssh_username": "{{user `ssh_username`}}",
+      "ssh_password": "{{user `ssh_password`}}",
+      "shutdown_timeout": "2h",
+      "shutdown_command": "echo 'vagrant'|sudo -S shutdown -P now",
+      "guest_os_type": "ubuntu-64",
+      "disk_size": "{{user `disk_size`}}",
+      "vnc_port_min": 5900,
+      "vnc_port_max": 5980,
+      "version": 11,
+      "vmx_data": {
+        "RemoteDisplay.vnc.enabled": "false",
+        "RemoteDisplay.vnc.port": "5900",
+        "memsize": "2048",
+        "numvcpus": "2",
+        "scsi0.virtualDev": "lsisas1068"
+      }
+    },
+    {
+        "type": "virtualbox-iso",
+        "boot_command": [
+            "<leftSuper><wait5>",
+            "i<wait>n<wait>s<wait>t<wait>a<wait>l<wait>l<wait>",
+            "<enter><wait10>",
+            "<enter><wait5>",
+            "<enter><wait5>",
+            "<tab><wait><down><wait><spacebar><wait>",
+            "<tab><wait><tab><wait><tab><wait><enter><wait5>",
+            "<tab><wait><enter><wait5>",
+            "<enter><wait10>",
+            "<enter><wait10>",
+            "v<wait>a<wait>g<wait>r<wait>a<wait>n<wait>t<tab><wait>",
+            "securityonion<tab><wait><tab><wait>",
+            "v<wait>a<wait>g<wait>r<wait>a<wait>n<wait>t<tab><wait>",
+            "v<wait>a<wait>g<wait>r<wait>a<wait>n<wait>t<tab><wait>",
+            "<tab><wait><tab><wait><tab><wait5>",
+            "<enter><wait5m>",
+            "<tab><wait><tab><wait><enter><wait30>",
+            "<enter><wait1m>"
+        ],
+        "boot_wait": "2m30s",
+        "vm_name": "packer-securityonion-16.04.1-amd64",
+        "iso_url": "{{user `iso_urls`}}",
+        "iso_checksum_type": "{{user `iso_checksum_type`}}",
+        "iso_checksum": "{{user `iso_checksum`}}",
+        "headless": false,
+        "ssh_username": "{{user `ssh_username`}}",
+        "ssh_password": "{{user `ssh_password`}}",
+        "shutdown_timeout": "2h",
+        "shutdown_command": "echo 'vagrant'|sudo -S shutdown -P now",
+        "guest_os_type": "Ubuntu_64",
+        "disk_size": "{{user `disk_size`}}",
+        "guest_additions_path": "VBoxGuestAdditions_{{.Version}}.iso",
+        "virtualbox_version_file": ".vbox_version",
+        "vboxmanage": [
+        [
+            "modifyvm",
+            "{{.Name}}",
+            "--memory",
+            "8192"
+        ],
+        [
+            "modifyvm",
+            "{{.Name}}",
+            "--cpus",
+            "4"
+        ]
+        ]
+    }
+    ],
+    "provisioners": [
+        {      
+            "type": "shell",
+            "script": "scripts/so-vagrant-setup.sh",
+            "execute_command": "echo 'vagrant' | {{.Vars}} sudo -S -E bash '{{.Path}}'"
+        }
+    ],
+    "post-processors": [{
+      "type": "vagrant",
+      "keep_input_artifact": false,
+      "compression_level": "8",
+      "output": "Boxes/securityonion_1604_{{.Provider}}.box",
+      "vagrantfile_template": "vagrantfile-securityonion_1604.template"
+    }],
+    "variables": {
+    "iso_checksum_type": "md5",
+    "iso_checksum": "ca835cef92c2c0daafa16e789c343d1d",
+    "iso_urls": [
+        "isos/securityonion-16.04.6.1.iso",
+        "https://github.com/Security-Onion-Solutions/security-onion/releases/download/v16.04.6.1_20190514/securityonion-16.04.6.1.iso"
+    ],
+    "disk_size": "50720",
+    "ssh_username": "vagrant",
+    "ssh_password": "vagrant"
+  }
+}
