@@ -43,13 +43,25 @@ Vagrant.configure("2") do |config|
     cfg.vm.box = "dlee35/securityonion"
     #cfg.vm.box_version = "16.04.6.1"
     cfg.vm.hostname = "soanalyst01"
-    #config.vm.provision :shell, path: "securityonion.sh"
-    #config.vm.provision "reload"
-    cfg.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.101", auto_config: false
+    cfg.vm.provision :shell, path: "scripts/securityonion-setup.sh"
+    config.vm.provision "reload"
+
+    cfg.vm.provider "vmware_desktop" do |v, override|
+      override.vm.synced_folder ".", "/vagrant", type: "rsync"
+      v.vmx["displayname"] = "DEMO-SOANALYST01"
+      v.vmx["ethernet1.connectiontype"] = "custom"
+      v.vmx["ethernet1.present"] = "TRUE"
+      v.vmx["ethernet1.virtualdev"] = "e1000"
+      v.vmx["ethernet1.vnet"] = "VMnet7"
+      v.memory = 2048
+      v.cpus = 2
+      v.gui = true
+    end
 
     cfg.vm.provider "virtualbox" do |vb, override|
       vb.gui = false
       vb.name = "DEMO-SOANALYST01"
+      override.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.101", auto_config: false
       vb.customize ["modifyvm", :id, "--memory", 2048]
       vb.customize ["modifyvm", :id, "--cpus", 2]
       vb.customize ["modifyvm", :id, "--vram", "32"]
@@ -59,18 +71,28 @@ Vagrant.configure("2") do |config|
   end
 
   config.vm.define "somaster" do |cfg|
-    cfg.vm.box = "bento/ubuntu-16.04"
+    cfg.vm.box = "dlee35/securityonion"
     cfg.vm.hostname = "somaster"
-    cfg.vm.synced_folder "./wazuh", "/opt/wazuh"
-    config.vm.provision :shell, path: "securityonion.sh"
+    config.vm.provision :shell, path: "scripts/securityonion-setup.sh"
     config.vm.provision "reload"
-    cfg.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.200", auto_config: false
-    cfg.vm.network :private_network, virtualbox__intnet: "intnet", auto_config: false
-    cfg.vm.network "forwarded_port", guest: 443, host: 8843
+    cfg.vm.network "forwarded_port", guest: 443, host: 8843, auto_correct: true
+
+    cfg.vm.provider "vmware_desktop" do |v, override|
+      override.vm.synced_folder ".", "/vagrant", type: "rsync"
+      v.vmx["displayname"] = "DEMO-SOMASTER01"
+      v.vmx["ethernet1.connectiontype"] = "custom"
+      v.vmx["ethernet1.present"] = "TRUE"
+      v.vmx["ethernet1.virtualdev"] = "e1000"
+      v.vmx["ethernet1.vnet"] = "VMnet7"
+      v.memory = 8192
+      v.cpus = 4
+      v.gui = true
+    end
 
     cfg.vm.provider "virtualbox" do |vb, override|
+      override.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.200", auto_config: false
       vb.gui = false
-      vb.name = "DEMO-SOMASTER"
+      vb.name = "DEMO-SOMASTER01"
       vb.customize ["modifyvm", :id, "--memory", 8192]
       vb.customize ["modifyvm", :id, "--cpus", 4]
       vb.customize ["modifyvm", :id, "--vram", "32"]
@@ -81,16 +103,28 @@ Vagrant.configure("2") do |config|
   end
 
   config.vm.define "sostorage01" do |cfg|
-    cfg.vm.box = "bento/ubuntu-16.04"
+    cfg.vm.box = "dlee35/securityonion"
     cfg.vm.hostname = "sostorage01"
     cfg.vm.synced_folder "./wazuh", "/opt/wazuh"
-    config.vm.provision :shell, path: "securityonion.sh"
+    config.vm.provision :shell, path: "scripts/securityonion-setup.sh"
     config.vm.provision "reload"
-    cfg.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.215", auto_config: false
+
+    cfg.vm.provider "vmware_desktop" do |v, override|
+      override.vm.synced_folder ".", "/vagrant", type: "rsync"
+      v.vmx["displayname"] = "DEMO-SOSTORAGE01"
+      v.vmx["ethernet1.connectiontype"] = "custom"
+      v.vmx["ethernet1.present"] = "TRUE"
+      v.vmx["ethernet1.virtualdev"] = "e1000"
+      v.vmx["ethernet1.vnet"] = "VMnet7"
+      v.memory = 8192
+      v.cpus = 4
+      v.gui = true
+    end
 
     cfg.vm.provider "virtualbox" do |vb, override|
       vb.gui = false
       vb.name = "DEMO-SOSTORAGE01"
+      override.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.215", auto_config: false
       vb.customize ["modifyvm", :id, "--memory", 8192]
       vb.customize ["modifyvm", :id, "--cpus", 4]
       vb.customize ["modifyvm", :id, "--vram", "32"]
@@ -100,17 +134,29 @@ Vagrant.configure("2") do |config|
   end
 
   config.vm.define "sosensor01" do |cfg|
-    cfg.vm.box = "bento/ubuntu-16.04"
+    cfg.vm.box = "dlee35/securityonion"
     cfg.vm.hostname = "sosensor01"
     cfg.vm.synced_folder "./wazuh", "/opt/wazuh"
-    config.vm.provision :shell, path: "securityonion.sh"
+    config.vm.provision :shell, path: "scripts/securityonion-setup.sh"
     config.vm.provision "reload"
-    cfg.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.210", auto_config: false
-    cfg.vm.network :private_network, virtualbox__intnet: "intnet01", auto_config: false
+
+    cfg.vm.provider "vmware_desktop" do |v, override|
+      override.vm.synced_folder ".", "/vagrant", type: "rsync"
+      v.vmx["displayname"] = "DEMO-SOSENSOR01"
+      v.vmx["ethernet1.connectiontype"] = "custom"
+      v.vmx["ethernet1.present"] = "TRUE"
+      v.vmx["ethernet1.virtualdev"] = "e1000"
+      v.vmx["ethernet1.vnet"] = "VMnet7"
+      v.memory = 8192
+      v.cpus = 4
+      v.gui = true
+    end
 
     cfg.vm.provider "virtualbox" do |vb, override|
       vb.gui = false
       vb.name = "DEMO-SOSENSOR01"
+      override.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.210", auto_config: false
+      override.vm.network :private_network, virtualbox__intnet: "intnet01", auto_config: false
       vb.customize ["modifyvm", :id, "--memory", 8192]
       vb.customize ["modifyvm", :id, "--cpus", 4]
       vb.customize ["modifyvm", :id, "--vram", "32"]
@@ -121,17 +167,29 @@ Vagrant.configure("2") do |config|
   end
 
   config.vm.define "sosensor02" do |cfg|
-    cfg.vm.box = "bento/ubuntu-16.04"
+    cfg.vm.box = "dlee35/securityonion"
     cfg.vm.hostname = "sosensor02"
     cfg.vm.synced_folder "./wazuh", "/opt/wazuh"
-    config.vm.provision :shell, path: "securityonion.sh"
+    config.vm.provision :shell, path: "scripts/securityonion-setup.sh"
     config.vm.provision "reload"
-    cfg.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.220", auto_config: false
-    cfg.vm.network :private_network, virtualbox__intnet: "intnet02", auto_config: false
+
+    cfg.vm.provider "vmware_desktop" do |v, override|
+      override.vm.synced_folder ".", "/vagrant", type: "rsync"
+      v.vmx["displayname"] = "DEMO-SOSENSOR02"
+      v.vmx["ethernet1.connectiontype"] = "custom"
+      v.vmx["ethernet1.present"] = "TRUE"
+      v.vmx["ethernet1.virtualdev"] = "e1000"
+      v.vmx["ethernet1.vnet"] = "VMnet7"
+      v.memory = 8192
+      v.cpus = 4
+      v.gui = true
+    end
 
     cfg.vm.provider "virtualbox" do |vb, override|
       vb.gui = false
       vb.name = "DEMO-SOSENSOR02"
+      override.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.220", auto_config: false
+      override.vm.network :private_network, virtualbox__intnet: "intnet02", auto_config: false
       vb.customize ["modifyvm", :id, "--memory", 4096]
       vb.customize ["modifyvm", :id, "--cpus", 4]
       vb.customize ["modifyvm", :id, "--vram", "32"]
