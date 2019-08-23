@@ -24,7 +24,10 @@
       ],
       "boot_wait": "2m30s",
       "vm_name": "packer-securityonion-16.04.1-amd64",
-      "iso_url": "{{user `iso_urls`}}",
+      "iso_urls": [
+          "isos/securityonion-16.04.6.1.iso",
+          "https://github.com/Security-Onion-Solutions/security-onion/releases/download/v16.04.6.1_20190514/securityonion-16.04.6.1.iso"
+      ],
       "iso_checksum_type": "{{user `iso_checksum_type`}}",
       "iso_checksum": "{{user `iso_checksum`}}",
       "headless": false,
@@ -69,7 +72,10 @@
         ],
         "boot_wait": "2m30s",
         "vm_name": "packer-securityonion-16.04.1-amd64",
-        "iso_url": "{{user `iso_urls`}}",
+        "iso_urls": [
+            "isos/securityonion-16.04.6.1.iso",
+            "https://github.com/Security-Onion-Solutions/security-onion/releases/download/v16.04.6.1_20190514/securityonion-16.04.6.1.iso"
+        ],
         "iso_checksum_type": "{{user `iso_checksum_type`}}",
         "iso_checksum": "{{user `iso_checksum`}}",
         "headless": false,
@@ -114,12 +120,8 @@
     "variables": {
     "iso_checksum_type": "md5",
     "iso_checksum": "ca835cef92c2c0daafa16e789c343d1d",
-    "iso_urls": [
-        "isos/securityonion-16.04.6.1.iso",
-        "https://github.com/Security-Onion-Solutions/security-onion/releases/download/v16.04.6.1_20190514/securityonion-16.04.6.1.iso"
-    ],
     "disk_size": "50720",
     "ssh_username": "vagrant",
     "ssh_password": "vagrant"
-  }
+    }
 }
