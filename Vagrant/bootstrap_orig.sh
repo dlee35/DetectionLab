@@ -1,111 +1,103 @@
 #! /bin/bash
 
+export DEBIAN_FRONTEND=noninteractive
+echo "apt-fast apt-fast/maxdownloads string 10" | debconf-set-selections;
+echo "apt-fast apt-fast/dlflag boolean true" | debconf-set-selections;
+sed -i "2ideb mirror://mirrors.ubuntu.com/mirrors.txt xenial main restricted universe multiverse\ndeb mirror://mirrors.ubuntu.com/mirrors.txt xenial-updates main restricted universe multiverse\ndeb mirror://mirrors.ubuntu.com/mirrors.txt xenial-backports main restricted universe multiverse\ndeb mirror://mirrors.ubuntu.com/mirrors.txt xenial-security main restricted universe multiverse" /etc/apt/sources.list
+
 apt_install_prerequisites() {
-  HOST=$(hostname)
-  apt-get update
+  # Add repository for apt-fast
+  add-apt-repository -y ppa:apt-fast/stable
   # Install prerequisites and useful tools
-  if [ "$HOST" == "acng" ]; then
-    apt-get install -y apt-cacher-ng apt-transport-https ca-certificates curl software-properties-common
-    echo "PassThroughPattern: .*" >> /etc/apt-cacher-ng/acng.conf
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
-    add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-    apt-get update
-    apt-get install -y docker-ce
-    if [ -f /vagrant/resources/acng/config.yml ]; then
-      mkdir -p /opt/docker/registry
-      cp /vagrant/resources/acng/config.yml /opt/docker/registry
-      docker run -d -p 5000:5000 --restart=always --name registry -v /opt/docker/registry/config.yml:/etc/docker/registry/config.yml registry:2
+  echo "[$(date +%H:%M:%S)]: Running apt-get update..."
+  apt-get -qq update
+  apt-get -qq install -y apt-fast
+  echo "[$(date +%H:%M:%S)]: Running apt-fast install..."
+  apt-fast -qq install -y jq whois build-essential git docker docker-compose unzip htop
+}
+
+test_prerequisites() {
+  for package in jq whois build-essential git docker docker-compose unzip
+  do
+    echo "[$(date +%H:%M:%S)]: [TEST] Validating that $package is correctly installed..."
+    # Loop through each package using dpkg
+    if ! dpkg -S $package > /dev/null; then
+      # If which returns a non-zero return code, try to re-install the package
+      echo "[-] $package was not found. Attempting to reinstall."
+      apt-get -qq update && apt-get install -y $package
+      if ! which $package > /dev/null; then
+        # If the reinstall fails, give up
+        echo "[X] Unable to install $package even after a retry. Exiting."
+        exit 1
+      fi
+    else
+      echo "[+] $package was successfully installed!"
     fi
-  fi
-  if [ "$HOST" == "web" ]; then
-    if [ -f /vagrant/resources/securityonion/00proxy ]; then
-      cp /vagrant/resources/securityonion/00proxy /etc/apt/apt.conf.d/00proxy
-    fi
-    apt-get install -y unzip apache2
-    wget -O latest.zip https://readthedocs.org/projects/securityonion/downloads/htmlzip/latest/ 
-    unzip latest.zip
-    cp -av securityonion-latest/* /var/www/html/
-  fi
-  if [ "$HOST" == "malware" ]; then
-    apt-get install -y ca-certificates curl software-properties-common git
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
-    add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-    apt-get update
-    apt-get install -y docker-ce
-    usermod -aG docker vagrant
-    curl -sL https://deb.nodesource.com/setup_10.x -o nodesource_setup.sh
-    bash nodesource_setup.sh
-    apt-get install -y nodejs
-    npm install ngrok && cp ~/node_modules/ngrok/bin/ngrok /usr/sbin/
-    wget wget https://raw.githubusercontent.com/tedsluis/tmux.conf/master/.tmux.conf -O /home/vagrant/.tmux.conf
-    git clone https://github.com/mauri870/ransomware.git /opt/ransomware
-    chown -R vagrant.vagrant /opt/ransomware /home/vagrant/.tmux.conf
-    if [ -f /vagrant/resources/securityonion/daemon.json ]; then
-      mkdir /etc/docker
-      cp /vagrant/resources/securityonion/daemon.json /etc/docker/daemon.json
-    fi
-    systemctl restart docker
-  fi
+  done
 }
 
 fix_eth1_static_ip() {
   # There's a fun issue where dhclient keeps messing with eth1 despite the fact
   # that eth1 has a static IP set. We workaround this by setting a static DHCP lease.
-  if grep -q "172.16.163" /etc/dhcp/dhclient.conf; then
-    echo -e 'interface "eth1" {
-      send host-name = gethostname();
-      send dhcp-requested-address 172.16.163.221;
-    }' >> /etc/dhcp/dhclient.conf
-    service networking restart
-  fi
-  HOST=$(hostname)
+  echo -e 'interface "eth1" {
+    send host-name = gethostname();
+    send dhcp-requested-address 192.168.38.105;
+  }' >> /etc/dhcp/dhclient.conf
+  service networking restart
   # Fix eth1 if the IP isn't set correctly
   ETH1_IP=$(ifconfig eth1 | grep 'inet addr' | cut -d ':' -f 2 | cut -d ' ' -f 1)
-  if [[ "$ETH1_IP" != "172.16.163.22"* ]]; then
+  if [ "$ETH1_IP" != "192.168.38.105" ]; then
     echo "Incorrect IP Address settings detected. Attempting to fix."
-    echo "" >> /etc/network/interfaces
-    echo "auto eth1" >> /etc/network/interfaces
-    echo "iface eth1 inet static" >> /etc/network/interfaces
-    if [ "$HOST" == "web" ]; then
-      echo "  address 172.16.163.221" >> /etc/network/interfaces
-    elif [ "$HOST" == "acng" ]; then
-      echo "  address 172.16.163.223" >> /etc/network/interfaces
-    elif [ "$HOST" == "malware" ]; then
-      echo "  address 172.16.163.224" >> /etc/network/interfaces
+    ifdown eth1
+    ip addr flush dev eth1
+    ifup eth1
+    ETH1_IP=$(ifconfig eth1 | grep 'inet addr' | cut -d ':' -f 2 | cut -d ' ' -f 1)
+    if [ "$ETH1_IP" == "192.168.38.105" ]; then
+      echo "[$(date +%H:%M:%S)]: The static IP has been fixed and set to 192.168.38.105"
+    else
+      echo "[$(date +%H:%M:%S)]: Failed to fix the broken static IP for eth1. Exiting because this will cause problems with other VMs."
+      exit 1
     fi
-    echo "  netmask 255.255.255.0" >> /etc/network/interfaces
-    echo "  gateway 172.16.163.222" >> /etc/network/interfaces
-    echo "  post-up route del default" >> /etc/network/interfaces
-    echo "  post-up route add default gw 172.16.163.222" >> /etc/network/interfaces
-    echo "  dns-nameservers 172.16.163.222" >> /etc/network/interfaces
   fi
 }
 
-install_python() {
-  # Install Python 3.6.4
-  if ! which /usr/local/bin/python3.6 > /dev/null; then
-    echo "Installing Python v3.6.4..."
-    wget https://www.python.org/ftp/python/3.6.4/Python-3.6.4.tgz
-    tar -xvf Python-3.6.4.tgz
-    cd Python-3.6.4 || exit
-    ./configure && make && make install
+install_golang() {
+  if ! which go > /dev/null; then
+    echo "[$(date +%H:%M:%S)]: Installing Golang v.1.12..."
     cd /home/vagrant || exit
+    wget --progress=bar:force https://dl.google.com/go/go1.12.linux-amd64.tar.gz
+    tar -C /usr/local -xzf go1.12.linux-amd64.tar.gz
+    mkdir /root/go
   else
-    echo "Python seems to be downloaded already.. Skipping."
+    echo "[$(date +%H:%M:%S)]: Golang seems to be installed already. Skipping."
   fi
 }
 
 install_splunk() {
   # Check if Splunk is already installed
   if [ -f "/opt/splunk/bin/splunk" ]; then
-    echo "Splunk is already installed"
+    echo "[$(date +%H:%M:%S)]: Splunk is already installed"
   else
-    echo "Installing Splunk..."
-    # Get Splunk.com into the DNS cache. Sometimes resolution randomly fails during wget below
-    dig @8.8.8.8 splunk.com
-    # Download Splunk
-    wget --progress=bar:force -O splunk-7.2.1-be11b2c46e23-linux-2.6-amd64.deb 'https://www.splunk.com/bin/splunk/DownloadActivityServlet?architecture=x86_64&platform=linux&version=7.2.1&product=splunk&filename=splunk-7.2.1-be11b2c46e23-linux-2.6-amd64.deb&wget=true'
-    dpkg -i splunk-7.2.1-be11b2c46e23-linux-2.6-amd64.deb
+    echo "[$(date +%H:%M:%S)]: Installing Splunk..."
+    # Get download.splunk.com into the DNS cache. Sometimes resolution randomly fails during wget below
+    dig @8.8.8.8 download.splunk.com > /dev/null
+    dig @8.8.8.8 splunk.com > /dev/null
+    mkdir splunk
+
+    # Try to resolve the latest version of Splunk by parsing the HTML on the downloads page
+    echo "[$(date +%H:%M:%S)]: Attempting to autoresolve the latest version of Splunk..."
+    LATEST_SPLUNK=$(curl https://www.splunk.com/en_us/download/splunk-enterprise.html | grep -i deb | grep -Eo "data-link=\"................................................................................................................................" | cut -d '"' -f 2)
+    # Sanity check what was returned from the auto-parse attempt
+    if [[ "$(echo $LATEST_SPLUNK | grep -c "^https:")" -eq 1 ]] && [[ "$(echo $LATEST_SPLUNK | grep -c "\.deb$")" -eq 1 ]]; then
+      echo "[$(date +%H:%M:%S)]: The URL to the latest Splunk version was automatically resolved as: $LATEST_SPLUNK"
+      echo "[$(date +%H:%M:%S)]: Attempting to download..."
+      wget --progress=bar:force -P splunk/ "$LATEST_SPLUNK"
+    else
+      echo "[$(date +%H:%M:%S)]: Unable to auto-resolve the latest Splunk version. Falling back to hardcoded URL..."
+      # Download Hardcoded Splunk
+      wget --progress=bar:force -O splunk/splunk-7.2.6-c0bf0f679ce9-linux-2.6-amd64.deb 'https://www.splunk.com/bin/splunk/DownloadActivityServlet?architecture=x86_64&platform=linux&version=7.2.6&product=splunk&filename=splunk-7.2.6-c0bf0f679ce9-linux-2.6-amd64.deb&wget=true'
+    fi
+    dpkg -i splunk/*.deb
     /opt/splunk/bin/splunk start --accept-license --answer-yes --no-prompt --seed-passwd changeme
     /opt/splunk/bin/splunk add index wineventlog -auth 'admin:changeme'
     /opt/splunk/bin/splunk add index osquery -auth 'admin:changeme'
@@ -117,13 +109,20 @@ install_splunk() {
     /opt/splunk/bin/splunk add index threathunting -auth 'admin:changeme'
     /opt/splunk/bin/splunk install app /vagrant/resources/splunk_forwarder/splunk-add-on-for-microsoft-windows_500.tgz -auth 'admin:changeme'
     /opt/splunk/bin/splunk install app /vagrant/resources/splunk_server/add-on-for-microsoft-sysmon_800.tgz -auth 'admin:changeme'
-    /opt/splunk/bin/splunk install app /vagrant/resources/splunk_server/asn-lookup-generator_012.tgz -auth 'admin:changeme'
+    /opt/splunk/bin/splunk install app /vagrant/resources/splunk_server/asn-lookup-generator_101.tgz -auth 'admin:changeme'
+    /opt/splunk/bin/splunk install app /vagrant/resources/splunk_server/lookup-file-editor_331.tgz
     /opt/splunk/bin/splunk install app /vagrant/resources/splunk_server/force-directed-app-for-splunk_200.tgz  -auth 'admin:changeme'
     /opt/splunk/bin/splunk install app /vagrant/resources/splunk_server/punchcard-custom-visualization_130.tgz  -auth 'admin:changeme'
     /opt/splunk/bin/splunk install app /vagrant/resources/splunk_server/sankey-diagram-custom-visualization_130.tgz  -auth 'admin:changeme'
-    /opt/splunk/bin/splunk install app /vagrant/resources/splunk_server/threathunting_11.tgz  -auth 'admin:changeme'
+    /opt/splunk/bin/splunk install app /vagrant/resources/splunk_server/threathunting_134.tgz  -auth 'admin:changeme'
     # Add custom Macro definitions for ThreatHunting App
-    cp /vagrant/resources/splunk_server/macros.conf /opt/splunk/etc/apps/ThreatHunting/local
+    cp /vagrant/resources/splunk_server/macros.conf /opt/splunk/etc/apps/ThreatHunting/default/macros.conf
+    # Fix Windows TA macros
+    mkdir /opt/splunk/etc/apps/Splunk_TA_windows/local
+    cp /opt/splunk/etc/apps/Splunk_TA_windows/default/macros.conf /opt/splunk/etc/apps/Splunk_TA_windows/local
+    sed -i 's/wineventlog_windows/wineventlog/g' /opt/splunk/etc/apps/Splunk_TA_windows/local/macros.conf
+    # Fix Force Directed App until 2.0.1 is released (https://answers.splunk.com/answers/668959/invalid-key-in-stanza-default-value-light.html#answer-669418)
+    rm /opt/splunk/etc/apps/force_directed_viz/default/savedsearches.conf
 
     # Add a Splunk TCP input on port 9997
     echo -e "[splunktcp://9997]\nconnection_host = ip" > /opt/splunk/etc/apps/search/local/inputs.conf
@@ -135,10 +134,21 @@ install_splunk() {
     sed -i.bak 's/max_memtable_bytes = 10000000/max_memtable_bytes = 30000000/g' /opt/splunk/etc/system/local/limits.conf
 
     # Skip Splunk Tour and Change Password Dialog
+    echo "[$(date +%H:%M:%S)]: Disabling the Splunk tour prompt..."
     touch /opt/splunk/etc/.ui_login
+    mkdir -p /opt/splunk/etc/users/admin/search/local
+    echo -e "[search-tour]\nviewed = 1" > /opt/splunk/etc/system/local/ui-tour.conf
+    mkdir /opt/splunk/etc/apps/user-prefs/local
+    echo '[general]
+ render_version_messages = 0
+ hideInstrumentationOptInModal = 1
+ dismissedInstrumentationOptInVersion = 2
+ [general_default]
+ hideInstrumentationOptInModal = 1
+ showWhatsNew = 0' > /opt/splunk/etc/system/local/user-prefs.conf
+
     # Enable SSL Login for Splunk
-    echo '[settings]
-    enableSplunkWebSSL = true' > /opt/splunk/etc/system/local/web.conf
+    echo -e "[settings]\nenableSplunkWebSSL = true" > /opt/splunk/etc/system/local/web.conf
     # Reboot Splunk to make changes take effect
     /opt/splunk/bin/splunk restart
     /opt/splunk/bin/splunk enable boot-start
@@ -150,10 +160,11 @@ install_splunk() {
 install_fleet() {
   # Install Fleet
   if [ -f "/home/vagrant/kolide-quickstart" ]; then
-    echo "Fleet is already installed"
+    echo "[$(date +%H:%M:%S)]: Fleet is already installed"
   else
-    echo "Installing Fleet..."
+    echo "[$(date +%H:%M:%S)]: Installing Fleet..."
     echo -e "\n127.0.0.1       kolide" >> /etc/hosts
+    echo -e "\n127.0.0.1       logger" >> /etc/hosts
     git clone https://github.com/kolide/kolide-quickstart.git
     cd kolide-quickstart || echo "Something went wrong while trying to clone the kolide-quickstart repository"
     cp /vagrant/resources/fleet/server.* .
@@ -170,21 +181,21 @@ install_fleet() {
 
 download_palantir_osquery_config() {
   if [ -f /home/vagrant/osquery-configuration ]; then
-    echo "osquery configs have already been downloaded"
+    echo "[$(date +%H:%M:%S)]: osquery configs have already been downloaded"
   else
     # Import Palantir osquery configs into Fleet
-    echo "Downloading Palantir configs..."
+    echo "[$(date +%H:%M:%S)]: Downloading Palantir osquery configs..."
     git clone https://github.com/palantir/osquery-configuration.git
   fi
 }
 
 import_osquery_config_into_fleet() {
-  wget https://github.com/kolide/fleet/releases/download/2.0.1/fleet_2.0.1.zip
-  unzip fleet_2.0.1.zip -d fleet_2.0.1
-  cp fleet_2.0.1/linux/fleetctl /usr/local/bin/fleetctl && chmod +x /usr/local/bin/fleetctl
+  wget --progress=bar:force https://github.com/kolide/fleet/releases/download/2.1.1/fleet_2.1.1.zip
+  unzip fleet_2.1.1.zip -d fleet_2.1.1
+  cp fleet_2.1.1/linux/fleetctl /usr/local/bin/fleetctl && chmod +x /usr/local/bin/fleetctl
   fleetctl config set --address https://192.168.38.105:8412
   fleetctl config set --tls-skip-verify true
-  fleetctl setup --email admin@detectionlab.network --password 'admin123#' --org-name DetectionLab
+  fleetctl setup --email admin@detectionlab.network --username admin --password 'admin123#' --org-name DetectionLab
   fleetctl login --email admin@detectionlab.network --password 'admin123#'
 
   # Use fleetctl to import YAML files
@@ -199,48 +210,26 @@ import_osquery_config_into_fleet() {
   /opt/splunk/bin/splunk add monitor "/home/vagrant/kolide-quickstart/osquery_status" -index osquery-status -sourcetype 'osquery:status' -auth 'admin:changeme'
 }
 
-install_caldera() {
-  if [ -f "/lib/systemd/system/caldera.service" ]; then
-    echo "Caldera is already installed... Skipping"
-  else
-    # Install Mitre's Caldera
-    echo "Installing Caldera..."
-    cd /home/vagrant || exit
-    git clone https://github.com/mitre/caldera.git
-    cd /home/vagrant/caldera/caldera || exit
-    pip3.6 install -r requirements.txt
-
-    # Add a Systemd service for MongoDB
-    # https://www.howtoforge.com/tutorial/install-mongodb-on-ubuntu-16.04/
-    cp /vagrant/resources/caldera/mongod.service /lib/systemd/system/mongod.service
-    # Create Systemd service for Caldera
-    cp /vagrant/resources/caldera/caldera.service /lib/systemd/system/caldera.service
-    # Enable replication
-    echo 'replication:
-    replSetName: caldera' >> /etc/mongod.conf
-    service mongod start
-    systemctl enable mongod.service
-    cd /home/vagrant/caldera || exit
-    mkdir -p dep/crater/crater
-    wget https://github.com/mitre/caldera-crater/releases/download/v0.1.0/CraterMainWin8up.exe -O /home/vagrant/caldera/dep/crater/crater/CraterMain.exe
-    service caldera start
-    systemctl enable caldera.service
-  fi
-}
-
 install_bro() {
+  echo "[$(date +%H:%M:%S)]: Installing Bro..."
   # Environment variables
   NODECFG=/opt/bro/etc/node.cfg
   SPLUNK_BRO_JSON=/opt/splunk/etc/apps/TA-bro_json
   SPLUNK_BRO_MONITOR='monitor:///opt/bro/spool/manager'
   SPLUNK_SURICATA_MONITOR='monitor:///var/log/suricata'
+  SPLUNK_SURICATA_SOURCETYPE='json_suricata'
   echo "deb http://download.opensuse.org/repositories/network:/bro/xUbuntu_16.04/ /" > /etc/apt/sources.list.d/bro.list
   curl -s http://download.opensuse.org/repositories/network:/bro/xUbuntu_16.04/Release.key |apt-key add -
 
   # Update APT repositories
   apt-get -qq -ym update
   # Install tools to build and configure bro
-  apt-get -qq -ym install bro crudini
+  apt-get -qq -ym install bro crudini python-pip
+  export PATH=$PATH:/opt/bro/bin
+  pip install bro-pkg future
+  bro-pkg refresh
+  bro-pkg autoconfig
+  bro-pkg install --force salesforce/ja3
   # Load bro scripts
   echo '
   @load protocols/ftp/software
@@ -256,6 +245,7 @@ install_bro() {
   @load policy/protocols/smb
   @load policy/protocols/conn/vlan-logging
   @load policy/protocols/conn/mac-logging
+  @load ja3
 
   redef Intel::read_files += {
     "/opt/bro/etc/intel.dat"
@@ -296,6 +286,7 @@ install_bro() {
   crudini --set  $SPLUNK_BRO_JSON/local/inputs.conf $SPLUNK_SURICATA_MONITOR sourcetype   json_suricata
   crudini --set  $SPLUNK_BRO_JSON/local/inputs.conf $SPLUNK_SURICATA_MONITOR whitelist   'eve.json'
   crudini --set  $SPLUNK_BRO_JSON/local/inputs.conf $SPLUNK_SURICATA_MONITOR disabled   0
+  crudini --set  $SPLUNK_BRO_JSON/local/props.conf  $SPLUNK_SURICATA_SOURCETYPE TRUNCATE    0
 
   # Ensure permissions are correct and restart splunk
   chown -R splunk $SPLUNK_BRO_JSON
@@ -310,19 +301,21 @@ install_bro() {
 
 install_suricata() {
   # Run iwr -Uri testmyids.com -UserAgent "BlackSun" in Powershell to generate test alerts
-
+  echo "[$(date +%H:%M:%S)]: Installing Suricata..."
   # Install yq to maniuplate the suricata.yaml inline
-  /usr/bin/go get -u  github.com/mikefarah/yq
+  /usr/local/go/bin/go get -u github.com/mikefarah/yq
+
   # Install suricata
   add-apt-repository -y ppa:oisf/suricata-stable
   apt-get -qq -y update && apt-get -qq -y install suricata crudini
+  test_suricata_prerequisites
   # Install suricata-update
   cd /home/vagrant || exit 1
   git clone https://github.com/OISF/suricata-update.git
   cd /home/vagrant/suricata-update || exit 1
   python setup.py install
   # Add DC_SERVERS variable to suricata.yaml in support et-open signatures
-  /root/go/bin/yq w  -i /etc/suricata/suricata.yaml vars.address-groups.DC_SERVERS '$HOME_NET'
+  /root/go/bin/yq w -i /etc/suricata/suricata.yaml vars.address-groups.DC_SERVERS '$HOME_NET'
 
   # It may make sense to store the suricata.yaml file as a resource file if this begins to become too complex
   # Add more verbose alert logging
@@ -342,8 +335,11 @@ install_suricata() {
   /root/go/bin/yq d  -i /etc/suricata/suricata.yaml outputs.1.eve-log.types.2 # Remove SSH
   /root/go/bin/yq d  -i /etc/suricata/suricata.yaml outputs.1.eve-log.types.2 # Remove Stats
   /root/go/bin/yq d  -i /etc/suricata/suricata.yaml outputs.1.eve-log.types.2 # Remove Flow
+  # Enable JA3 fingerprinting
+  /root/go/bin/yq w -i /etc/suricata/suricata.yaml app-layer.protocols.tls.ja3-fingerprints true
   # AF packet monitoring should be set to eth1
   /root/go/bin/yq w -i /etc/suricata/suricata.yaml af-packet.0.interface eth1
+
 
   crudini --set --format=sh /etc/default/suricata '' iface eth1
   # update suricata signature sources
@@ -370,17 +366,59 @@ install_suricata() {
   fi
 }
 
+test_suricata_prerequisites() {
+  for package in suricata crudini
+  do
+    echo "[$(date +%H:%M:%S)]: [TEST] Validating that $package is correctly installed..."
+    # Loop through each package using dpkg
+    if ! dpkg -S $package > /dev/null; then
+      # If which returns a non-zero return code, try to re-install the package
+      echo "[-] $package was not found. Attempting to reinstall."
+      apt-get -qq update && apt-get install -y $package
+      if ! which $package > /dev/null; then
+        # If the reinstall fails, give up
+        echo "[X] Unable to install $package even after a retry. Exiting."
+        exit 1
+      fi
+    else
+      echo "[+] $package was successfully installed!"
+    fi
+  done
+
+  # One-off support for packages which aren't installed via dpkg
+  echo "[$(date +%H:%M:%S)]: [TEST] Validating that yq is correctly installed..."
+  # Check if the binary exists
+  if ! [ -f /root/go/bin/yq ]; then
+    # If it doesn't exist, try to re-install the package
+    echo "[-] yq was not found. Attempting to reinstall."
+    /usr/local/go/bin/go get -u github.com/mikefarah/yq
+    if ! [ -f /root/go/bin/yq ]; then
+      # If the reinstall fails, give up
+      echo "[X] Unable to install yq even after a retry. Exiting."
+      exit 1
+    fi
+  else
+    echo "[+] yq was successfully installed!"
+  fi
+}
+
+postinstall_tasks() {
+  # Include Splunk and Bro in the PATH
+  echo export PATH="$PATH:/opt/splunk/bin:/opt/bro/bin" >> ~/.bashrc
+}
+
 main() {
   apt_install_prerequisites
+  test_prerequisites
   fix_eth1_static_ip
-  #install_python
-  #install_splunk
-  #install_fleet
-  #download_palantir_osquery_config
-  #import_osquery_config_into_fleet
-  #install_caldera
-  #install_suricata
-  #install_bro
+  install_golang
+  install_splunk
+  install_fleet
+  download_palantir_osquery_config
+  import_osquery_config_into_fleet
+  install_suricata
+  install_bro
+  postinstall_tasks
 }
 
 main

@@ -39,31 +39,7 @@ Vagrant.configure("2") do |config|
     end
   end
 
-  config.vm.define "somaster" do |cfg|
-    cfg.vm.box = "bento/ubuntu-16.04"
-    cfg.vm.hostname = "somaster"
-    cfg.vm.synced_folder "./wazuh", "/opt/wazuh"
-    config.vm.provision :shell, path: "securityonion.sh"
-    config.vm.provision "reload"
-    cfg.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.200", auto_config: false
-    cfg.vm.network :private_network, virtualbox__intnet: "intnet", auto_config: false
-    cfg.vm.network "forwarded_port", guest: 443, host: 8843
-
-    cfg.vm.provider "virtualbox" do |vb, override|
-      vb.gui = false
-      vb.name = "DEMO-SOMASTER"
-      #vb.customize ["modifyvm", :id, "--memory", 8192]
-      #vb.customize ["modifyvm", :id, "--cpus", 4]
-      vb.customize ["modifyvm", :id, "--memory", 16384]
-      vb.customize ["modifyvm", :id, "--cpus", 8]
-      vb.customize ["modifyvm", :id, "--vram", "32"]
-      vb.customize ["modifyvm", :id, "--nicpromisc3", "allow-all"]
-      vb.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
-      vb.customize ["setextradata", "global", "GUI/SuppressMessages", "all" ]
-    end
-  end
-
-  config.vm.define "soanalyst" do |cfg|
+  config.vm.define "soanalyst01" do |cfg|
     cfg.vm.box = "bento/ubuntu-16.04"
     cfg.vm.hostname = "soanalyst01"
     cfg.vm.synced_folder "./wazuh", "/opt/wazuh"
@@ -77,6 +53,28 @@ Vagrant.configure("2") do |config|
       vb.customize ["modifyvm", :id, "--memory", 2048]
       vb.customize ["modifyvm", :id, "--cpus", 2]
       vb.customize ["modifyvm", :id, "--vram", "32"]
+      vb.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
+      vb.customize ["setextradata", "global", "GUI/SuppressMessages", "all" ]
+    end
+  end
+
+  config.vm.define "somaster" do |cfg|
+    cfg.vm.box = "bento/ubuntu-16.04"
+    cfg.vm.hostname = "somaster"
+    cfg.vm.synced_folder "./wazuh", "/opt/wazuh"
+    config.vm.provision :shell, path: "securityonion.sh"
+    config.vm.provision "reload"
+    cfg.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.200", auto_config: false
+    cfg.vm.network :private_network, virtualbox__intnet: "intnet", auto_config: false
+    cfg.vm.network "forwarded_port", guest: 443, host: 8843
+
+    cfg.vm.provider "virtualbox" do |vb, override|
+      vb.gui = false
+      vb.name = "DEMO-SOMASTER"
+      vb.customize ["modifyvm", :id, "--memory", 8192]
+      vb.customize ["modifyvm", :id, "--cpus", 4]
+      vb.customize ["modifyvm", :id, "--vram", "32"]
+      vb.customize ["modifyvm", :id, "--nicpromisc3", "allow-all"]
       vb.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
       vb.customize ["setextradata", "global", "GUI/SuppressMessages", "all" ]
     end
