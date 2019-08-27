@@ -40,10 +40,12 @@ Vagrant.configure("2") do |config|
   end
 
   config.vm.define "soanalyst01" do |cfg|
-    cfg.vm.box = "file://../Boxes/securityonion_1604_virtualbox.box"
-    #cfg.vm.box = "dlee35/securityonion"
+    #cfg.vm.box = "file://../Boxes/securityonion_1604_vmware.box"
+    cfg.vm.box = "dlee35/securityonion"
     #cfg.vm.box_version = "16.04.6.1"
     cfg.vm.hostname = "soanalyst01"
+    cfg.vm.provision :shell, path: "scripts/securityonion-rename-interfaces.sh"
+    #cfg.vm.provision "reload"
     cfg.vm.provision :shell, path: "scripts/securityonion-setup.sh"
     cfg.vm.provision "reload"
 
@@ -74,8 +76,10 @@ Vagrant.configure("2") do |config|
   config.vm.define "somaster" do |cfg|
     cfg.vm.box = "dlee35/securityonion"
     cfg.vm.hostname = "somaster"
-    config.vm.provision :shell, path: "scripts/securityonion-setup.sh"
-    config.vm.provision "reload"
+    cfg.vm.provision :shell, path: "scripts/securityonion-rename-interfaces.sh"
+    #cfg.vm.provision "reload"
+    cfg.vm.provision :shell, path: "scripts/securityonion-setup.sh"
+    cfg.vm.provision "reload"
     cfg.vm.network "forwarded_port", guest: 443, host: 8843, auto_correct: true
 
     cfg.vm.provider "vmware_desktop" do |v, override|
@@ -106,9 +110,10 @@ Vagrant.configure("2") do |config|
   config.vm.define "sostorage01" do |cfg|
     cfg.vm.box = "dlee35/securityonion"
     cfg.vm.hostname = "sostorage01"
-    cfg.vm.synced_folder "./wazuh", "/opt/wazuh"
-    config.vm.provision :shell, path: "scripts/securityonion-setup.sh"
-    config.vm.provision "reload"
+    cfg.vm.provision :shell, path: "scripts/securityonion-rename-interfaces.sh"
+    #cfg.vm.provision "reload"
+    cfg.vm.provision :shell, path: "scripts/securityonion-setup.sh"
+    cfg.vm.provision "reload"
 
     cfg.vm.provider "vmware_desktop" do |v, override|
       override.vm.synced_folder ".", "/vagrant", type: "rsync"
@@ -137,9 +142,10 @@ Vagrant.configure("2") do |config|
   config.vm.define "sosensor01" do |cfg|
     cfg.vm.box = "dlee35/securityonion"
     cfg.vm.hostname = "sosensor01"
-    cfg.vm.synced_folder "./wazuh", "/opt/wazuh"
-    config.vm.provision :shell, path: "scripts/securityonion-setup.sh"
-    config.vm.provision "reload"
+    cfg.vm.provision :shell, path: "scripts/securityonion-rename-interfaces.sh"
+    #cfg.vm.provision "reload"
+    cfg.vm.provision :shell, path: "scripts/securityonion-setup.sh"
+    cfg.vm.provision "reload"
 
     cfg.vm.provider "vmware_desktop" do |v, override|
       override.vm.synced_folder ".", "/vagrant", type: "rsync"
@@ -148,6 +154,10 @@ Vagrant.configure("2") do |config|
       v.vmx["ethernet1.present"] = "TRUE"
       v.vmx["ethernet1.virtualdev"] = "e1000"
       v.vmx["ethernet1.vnet"] = "VMnet7"
+      v.vmx["ethernet2.connectiontype"] = "custom"
+      v.vmx["ethernet2.present"] = "TRUE"
+      v.vmx["ethernet2.virtualdev"] = "e1000"
+      v.vmx["ethernet2.vnet"] = "VMnet6"
       v.memory = 8192
       v.cpus = 4
       v.gui = true
@@ -170,9 +180,10 @@ Vagrant.configure("2") do |config|
   config.vm.define "sosensor02" do |cfg|
     cfg.vm.box = "dlee35/securityonion"
     cfg.vm.hostname = "sosensor02"
-    cfg.vm.synced_folder "./wazuh", "/opt/wazuh"
-    config.vm.provision :shell, path: "scripts/securityonion-setup.sh"
-    config.vm.provision "reload"
+    cfg.vm.provision :shell, path: "scripts/securityonion-rename-interfaces.sh"
+    #cfg.vm.provision "reload"
+    cfg.vm.provision :shell, path: "scripts/securityonion-setup.sh"
+    cfg.vm.provision "reload"
 
     cfg.vm.provider "vmware_desktop" do |v, override|
       override.vm.synced_folder ".", "/vagrant", type: "rsync"
@@ -181,6 +192,10 @@ Vagrant.configure("2") do |config|
       v.vmx["ethernet1.present"] = "TRUE"
       v.vmx["ethernet1.virtualdev"] = "e1000"
       v.vmx["ethernet1.vnet"] = "VMnet7"
+      v.vmx["ethernet2.connectiontype"] = "custom"
+      v.vmx["ethernet2.present"] = "TRUE"
+      v.vmx["ethernet2.virtualdev"] = "e1000"
+      v.vmx["ethernet2.vnet"] = "VMnet7"
       v.memory = 8192
       v.cpus = 4
       v.gui = true
@@ -190,7 +205,7 @@ Vagrant.configure("2") do |config|
       vb.gui = false
       vb.name = "DEMO-SOSENSOR02"
       override.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.220", auto_config: false
-      override.vm.network :private_network, virtualbox__intnet: "intnet02", auto_config: false
+      override.vm.network :private_network, virtualbox__intnet: "intnet", auto_config: false
       vb.customize ["modifyvm", :id, "--memory", 4096]
       vb.customize ["modifyvm", :id, "--cpus", 4]
       vb.customize ["modifyvm", :id, "--vram", "32"]

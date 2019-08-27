@@ -8,6 +8,12 @@ function add_vagrant_sudoers {
     sed -i "s/^.*requiretty/#Defaults requiretty/" /etc/sudoers
 }
 
+function stop_ossec {
+    # Write whitelist later
+    echo "==> Disabling Wazuh"
+    sudo /usr/sbin/so-ossec-stop
+}
+
 function install_vagrant_key {
     # Install vagrant key
     echo "==> Installing vagrant pub key"
@@ -20,9 +26,11 @@ function install_vagrant_key {
 function install_open_vm_tools {
     echo "==> Installing Open VM Tools"
     # Install open-vm-tools so we can mount shared folders
-    apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" open-vm-tools open-vm-tools-desktop; echo ''
+    sudo apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" open-vm-tools open-vm-tools-desktop
+    echo "==> exit status: $?"
     # Add /mnt/hgfs so the mount works automatically with Vagrant
-    mkdir -p /mnt/hgfs
+    sudo mkdir -p /mnt/hgfs
+    echo "==> exit status: $?"
 }
 
 function install_vmware_tools {
@@ -63,7 +71,8 @@ function install_vmware_tools {
 }
 
 add_vagrant_sudoers
-install_vagrant_key
+stop_ossec
 if [[ $PACKER_BUILDER_TYPE =~ vmware ]]; then
   install_open_vm_tools
 fi
+install_vagrant_key
