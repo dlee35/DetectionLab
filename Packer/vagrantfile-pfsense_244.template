@@ -1,0 +1,56 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.require_version ">= 1.6.2"
+
+Vagrant.configure("2") do |config|
+  config.vm.define "vagrant-pfsense-244"
+  config.vm.box = "pfsense_244"
+  config.vm.hostname = "pfsense"
+
+  config.vm.provider :virtualbox do |v, override|
+    v.gui = true
+    v.name = "pfsense"
+    v.memory = 512
+    v.cpus = 1
+    v.customize ["modifyvm", :id, "--vram", "32"]
+  end
+
+  config.vm.provider :vmware_desktop do |v, override|
+    v.gui = true
+    v.vmx["memsize"] = "512"
+    v.vmx["numvcpus"] = "1"
+    v.vmx["ethernet0.virtualDev"] = "e1000"
+    v.vmx["ethernet0.pciSlotNumber"] = "32"
+    v.vmx["ethernet0.connectiontype"] = "nat"
+    v.vmx["ethernet1.present"] = "true"
+    v.vmx["ethernet1.virtualDev"] = "e1000"
+    v.vmx["ethernet1.pciSlotNumber"] = "33"
+    v.vmx["ethernet1.connectiontype"] = "custom"
+    v.vmx["ethernet1.vnet"] = "VMnet1"
+    v.vmx["RemoteDisplay.vnc.enabled"] = "false"
+    v.vmx["RemoteDisplay.vnc.port"] = "5900"
+    v.vmx["scsi0.virtualDev"] = "lsisas1068"
+    v.enable_vmrun_ip_lookup = false
+  end
+
+  config.vm.provider :vmware_fusion do |v, override|
+    v.gui = true
+    v.vmx["memsize"] = "512"
+    v.vmx["numvcpus"] = "1"
+    v.vmx["ethernet0.virtualDev"] = "vmxnet3"
+    v.vmx["RemoteDisplay.vnc.enabled"] = "false"
+    v.vmx["RemoteDisplay.vnc.port"] = "5900"
+    v.vmx["scsi0.virtualDev"] = "lsisas1068"
+    v.vmx["gui.fitguestusingnativedisplayresolution"] = "TRUE"
+    v.vmx["mks.enable3d"] = "TRUE"
+    v.vmx["mks.forceDiscreteGPU"] = "TRUE"
+    v.vmx["gui.fullscreenatpoweron"] = "TRUE"
+    v.vmx["gui.viewmodeatpoweron"] = "fullscreen"
+    v.vmx["gui.lastPoweredViewMode"] = "fullscreen"
+    v.vmx["sound.startconnected"] = "FALSE"
+    v.vmx["sound.present"] = "FALSE"
+    v.vmx["sound.autodetect"] = "TRUE"
+    v.enable_vmrun_ip_lookup = false
+  end
+end
