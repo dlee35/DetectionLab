@@ -5,7 +5,7 @@ $svcs = "adws","dns","kdc","netlogon"
 Get-Service -name $svcs -ComputerName localhost | Select Machinename,Name,Status
 
 # Hardcoding DC hostname in hosts file
-Add-Content "c:\windows\system32\drivers\etc\hosts" "        192.168.38.102    dc.windomain.local"
+Add-Content "c:\windows\system32\drivers\etc\hosts" "        172.16.163.211    dc.windomain.local"
 
 # Force DNS resolution of the domain
 ping /n 1 dc.windomain.local

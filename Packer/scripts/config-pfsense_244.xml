@@ -89,8 +89,8 @@
 	<dhcpd>
 		<lan>
 			<range>
-				<from>192.168.1.100</from>
-				<to>192.168.1.199</to>
+				<from>172.16.163.150</from>
+				<to>172.16.163.199</to>
 			</range>
 		</lan>
 	</dhcpd>

@@ -182,7 +182,7 @@ import_osquery_config_into_fleet() {
   wget https://github.com/kolide/fleet/releases/download/2.0.1/fleet_2.0.1.zip
   unzip fleet_2.0.1.zip -d fleet_2.0.1
   cp fleet_2.0.1/linux/fleetctl /usr/local/bin/fleetctl && chmod +x /usr/local/bin/fleetctl
-  fleetctl config set --address https://192.168.38.105:8412
+  fleetctl config set --address https://172.16.163.105:8412
   fleetctl config set --tls-skip-verify true
   fleetctl setup --email admin@detectionlab.network --password 'admin123#' --org-name DetectionLab
   fleetctl login --email admin@detectionlab.network --password 'admin123#'

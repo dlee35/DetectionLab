@@ -41,19 +41,19 @@ fix_eth1_static_ip() {
   # that eth1 has a static IP set. We workaround this by setting a static DHCP lease.
   echo -e 'interface "eth1" {
     send host-name = gethostname();
-    send dhcp-requested-address 192.168.38.105;
+    send dhcp-requested-address 172.16.163.105;
   }' >> /etc/dhcp/dhclient.conf
   service networking restart
   # Fix eth1 if the IP isn't set correctly
   ETH1_IP=$(ifconfig eth1 | grep 'inet addr' | cut -d ':' -f 2 | cut -d ' ' -f 1)
-  if [ "$ETH1_IP" != "192.168.38.105" ]; then
+  if [ "$ETH1_IP" != "172.16.163.105" ]; then
     echo "Incorrect IP Address settings detected. Attempting to fix."
     ifdown eth1
     ip addr flush dev eth1
     ifup eth1
     ETH1_IP=$(ifconfig eth1 | grep 'inet addr' | cut -d ':' -f 2 | cut -d ' ' -f 1)
-    if [ "$ETH1_IP" == "192.168.38.105" ]; then
-      echo "[$(date +%H:%M:%S)]: The static IP has been fixed and set to 192.168.38.105"
+    if [ "$ETH1_IP" == "172.16.163.105" ]; then
+      echo "[$(date +%H:%M:%S)]: The static IP has been fixed and set to 172.16.163.105"
     else
       echo "[$(date +%H:%M:%S)]: Failed to fix the broken static IP for eth1. Exiting because this will cause problems with other VMs."
       exit 1
@@ -193,7 +193,7 @@ import_osquery_config_into_fleet() {
   wget --progress=bar:force https://github.com/kolide/fleet/releases/download/2.1.1/fleet_2.1.1.zip
   unzip fleet_2.1.1.zip -d fleet_2.1.1
   cp fleet_2.1.1/linux/fleetctl /usr/local/bin/fleetctl && chmod +x /usr/local/bin/fleetctl
-  fleetctl config set --address https://192.168.38.105:8412
+  fleetctl config set --address https://172.16.163.105:8412
   fleetctl config set --tls-skip-verify true
   fleetctl setup --email admin@detectionlab.network --username admin --password 'admin123#' --org-name DetectionLab
   fleetctl login --email admin@detectionlab.network --password 'admin123#'

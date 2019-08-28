@@ -31,7 +31,7 @@ if ($env:COMPUTERNAME -imatch 'vagrant') {
   }
 
   if ($env:COMPUTERNAME -imatch 'dc') {
-    . c:\vagrant\scripts\create-domain.ps1 192.168.38.102
+    . c:\vagrant\scripts\create-domain.ps1 172.16.163.211 
   } else {
     . c:\vagrant\scripts\join-domain.ps1
   }
