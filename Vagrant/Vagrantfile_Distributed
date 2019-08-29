@@ -1,3 +1,4 @@
+# DISTRIBUTED VAGRANTFILE FOR SECURITY ONION DEMO
 Vagrant.configure("2") do |config|
   config.vm.define "pfsense" do |cfg|
     cfg.vm.box = "dlee35/pfsense"
