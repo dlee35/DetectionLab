@@ -157,16 +157,26 @@ function list_providers {
 
   Write-Host 'Available Providers: '
   if (check_virtualbox_installed) {
-    Write-Host '[*] virtualbox'
+    $VirtualBoxInstalled = $true
+    Write-Host '[*] virtualbox available'
   }
   if (check_vmware_workstation_installed) {
     if (check_vmware_vagrant_plugin_installed) {
-      Write-Host '[*] vmware_desktop'
+      $VMwareInstalled = $true
+      Write-Host '[*] vmware_desktop available'
     }
   }
-  if ((-Not (check_virtualbox_installed)) -and (-Not (check_vmware_workstation_installed))) {
+  if ((-Not ($VirtualBoxInstalled)) -and (-Not ($VMwareInstalled))) {
     Write-Error 'You need to install a provider such as VirtualBox or VMware Workstation to continue.'
     break
+  }
+  if (($VirtualBoxInstalled) -and (-Not ($VMwareInstalled))) {
+    Write-Host '[*] Only VirtualBox found installed. Proceeding with virtualbox as provider.'
+    $ProviderName = 'virtualbox'
+  }
+  if ((-Not ($VirtualBoxInstalled)) -and ($VMwareInstalled)) {
+    Write-Host '[*] Only VMware Workstation found installed. Proceeding with vmware_desktop as provider.'
+    $ProviderName = 'vmware_desktop'
   }
   while (-Not ($ProviderName -eq 'virtualbox' -or $ProviderName -eq 'vmware_desktop')) {
     $ProviderName = Read-Host 'Which provider would you like to use?'
