@@ -34,7 +34,7 @@ fix_vagrant_ip() {
 
 fix_promisc_nic() {
   HOST=$(hostname)
-  if [[ "$HOST" == "sosensor"* ]]; then
+  if [[ "$HOST" == "sosensor"* || "$HOST" == "securityonion" ]]; then
     ETH_PROMISC=$(ip link | grep -E 'ens34|enp0s8|eth1' | cut -f 2 -d\: | tr -d [:space:])
     echo "" >> /etc/network/interfaces
     echo "auto $ETH_PROMISC" >> /etc/network/interfaces
@@ -77,6 +77,8 @@ fix_static_ip() {
       elif [ "$HOST" == "soanalyst01" ]; then
         echo "  address 172.16.163.101" >> /etc/network/interfaces
         cp /usr/share/securityonion/securityonion_setup.jpg /usr/share/securityonion.jpg
+      elif [ "$HOST" == "securityonion" ]; then
+        echo "  address 172.16.163.225" >> /etc/network/interfaces
       fi
       echo "  netmask 255.255.255.0" >> /etc/network/interfaces
       echo "  gateway 172.16.163.222" >> /etc/network/interfaces
