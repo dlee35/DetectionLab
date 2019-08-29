@@ -56,7 +56,7 @@ Param(
 )
 
 $DL_DIR = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
-$LAB_HOSTS = ('logger', 'dc', 'wef', 'win10')
+$LAB_HOSTS = @()
 
 function install_checker {
   param(
@@ -188,6 +188,16 @@ function list_providers {
   return $ProviderName
 }
 
+function get_lab_hosts {
+  $script:LAB_HOSTS += foreach ($line in Get-Content $DL_DIR\Vagrant\Vagrantfile | Select-String -Pattern '^ {1,}config.vm.define' | Out-String) 
+  {
+    foreach ($box in $line.Trim().Split([Environment]::NewLine)) 
+    {
+      ($box.Trim().Split('"')[1]).Where({ $null -ne $_ })
+    }
+  }
+}
+
 function preflight_checks {
   Write-Host '[preflight_checks] Running..'
   # Check to see that no boxes exist
@@ -218,7 +228,7 @@ function preflight_checks {
     Write-Host '[preflight_checks] Checking for vagrant instances..'
     $CurrentDir = Get-Location
     Set-Location "$DL_DIR\Vagrant"
-    if (($(vagrant status) | Select-String -Pattern "not[ _]created").Count -ne 4) {
+    if (($(vagrant status) | Select-String -Pattern "not[ _]created").Count -ne ($LAB_HOSTS).Count) {
       Write-Error 'You appear to have already created at least one Vagrant instance. This script does not support already created instances. Please either destroy the existing instances or follow the build steps in the README to continue.'
       break
     }
@@ -251,6 +261,19 @@ function preflight_checks {
       if ($LASTEXITCODE -ne 0) {
         Write-Error 'Unable to install the vagrant-reload plugin. Please try to do so manually and re-run this script.'
         break
+      }
+    }
+
+    if ($ProviderName -eq 'virtualbox') {
+      # Ensure the vagrant-vbguest plugin is installed
+      Write-Host '[preflight_checks] Checking if vagrant-vbguest is installed for virtualbox..'
+      if (-Not (vagrant plugin list | Select-String 'vagrant-vbguest')) {
+        Write-Output 'The vagrant-vbguest plugin is required and not currently installed. This script will attempt to install it now.'
+        (vagrant plugin install 'vagrant-vbguest')
+        if ($LASTEXITCODE -ne 0) {
+          Write-Error 'Unable to install the vagrant-vbguest plugin. Please try to do so manually and re-run this script.'
+          break
+        }
       }
     }
   }
@@ -384,53 +407,102 @@ function post_build_checks {
   }
 }
 
-# If no ProviderName was provided, get a provider
-if ($ProviderName -eq $Null -or $ProviderName -eq "") {
-  $ProviderName = list_providers
-}
+function main {
+  get_lab_hosts
 
-# Set Provider variable for use deployment functions
-if ($ProviderName -eq 'vmware_desktop') {
-  $PackerProvider = 'vmware'
-}
-else {
-  $PackerProvider = 'virtualbox'
-}
-
-# Run check functions
-preflight_checks
-
-# Build Packer Boxes
-if (!($VagrantOnly)) {
-  packer_build_box -Box 'windows_2016'
-  packer_build_box -Box 'windows_10'
-  # Move Packer Boxes
-  move_boxes
-}
-
-if (!($PackerOnly)) {
-  # Vagrant up each box and attempt to reload one time if it fails
-  forEach ($VAGRANT_HOST in $LAB_HOSTS) {
-    Write-Host "[main] Running vagrant_up_host for: $VAGRANT_HOST"
-    $result = vagrant_up_host -VagrantHost $VAGRANT_HOST
-    Write-Host "[main] vagrant_up_host finished. Exitcode: $result"
-    if ($result -eq '0') {
-      Write-Output "Good news! $VAGRANT_HOST was built successfully!"
-    }
-    else {
-      Write-Warning "Something went wrong while attempting to build the $VAGRANT_HOST box."
-      Write-Output "Attempting to reload and reprovision the host..."
-      Write-Host "[main] Running vagrant_reload_host for: $VAGRANT_HOST"
-      $retryResult = vagrant_reload_host -VagrantHost $VAGRANT_HOST
-      if ($retryResult -ne 0) {
-        Write-Error "Failed to bring up $VAGRANT_HOST after a reload. Exiting"
-        break
-      }
-    }
-    Write-Host "[main] Finished for: $VAGRANT_HOST"
+  # If no ProviderName was provided, get a provider
+  if ($ProviderName -eq $Null -or $ProviderName -eq "") {
+    $ProviderName = list_providers
+  }
+  
+  # Set Provider variable for use deployment functions
+  if ($ProviderName -eq 'vmware_desktop') {
+    $PackerProvider = 'vmware'
+  }
+  else {
+    $PackerProvider = 'virtualbox'
   }
 
-  Write-Host "[main] Running post_build_checks"
-  post_build_checks
-  Write-Host "[main] Finished post_build_checks"
+  # Run check functions
+  preflight_checks
+  
+  # Build Packer Boxes
+  if (!($VagrantOnly)) {
+    packer_build_box -Box 'windows_2016'
+    packer_build_box -Box 'windows_10'
+    # add packer_build_box for securityonion and pfsense
+    # Move Packer Boxes
+    move_boxes
+  }
+  
+  if (!($PackerOnly)) {
+    # Vagrant up each box and attempt to reload one time if it fails
+    forEach ($VAGRANT_HOST in $LAB_HOSTS) {
+      Write-Host "[main] Running vagrant_up_host for: $VAGRANT_HOST"
+      $result = vagrant_up_host -VagrantHost $VAGRANT_HOST
+      Write-Host "[main] vagrant_up_host finished. Exitcode: $result"
+      if ($result -eq '0') {
+        Write-Output "Good news! $VAGRANT_HOST was built successfully!"
+      }
+      else {
+        Write-Warning "Something went wrong while attempting to build the $VAGRANT_HOST box."
+        Write-Output "Attempting to reload and reprovision the host..."
+        Write-Host "[main] Running vagrant_reload_host for: $VAGRANT_HOST"
+        $retryResult = vagrant_reload_host -VagrantHost $VAGRANT_HOST
+        if ($retryResult -ne 0) {
+          Write-Error "Failed to bring up $VAGRANT_HOST after a reload. Exiting"
+          break
+        }
+      }
+      Write-Host "[main] Finished for: $VAGRANT_HOST"
+    }
+  
+    # Update accordingly
+    #Write-Host "[main] Running post_build_checks"
+    #post_build_checks
+    #Write-Host "[main] Finished post_build_checks"
+  }
 }
+function Menu {
+  Clear-Host
+  Do
+  {
+    Write-Host -Object '*********************************'
+    Write-Host -Object "Security Onion Deployment Options" -ForegroundColor Yellow
+    Write-Host -Object '*********************************'
+    Write-Host -Object ''
+    Write-Host -Object '1. Distributed Demo - Analyst, Master, Heavy, Forward, pfSense, Apt-Cacher NG, Web, DC'
+    Write-Host -Object ''
+    Write-Host -Object '2. Lab Environment  - Security Onion all-in-one, pfSense, DC, WEF, Win10'
+    Write-Host -Object ''
+    Write-Host -Object 'Q. Quit'
+    $Menu = Read-Host -Prompt '(1-2 or Q to Quit)'
+
+    switch($Menu) {
+      1
+      {
+        $VagrantOnly = $true
+        Copy-Item $DL_DIR\Vagrant\Vagrantfile_Distributed $DL_DIR\Vagrant\Vagrantfile
+        main
+        Exit
+      }
+      2
+      {
+        $VagrantOnly = $true
+        Copy-Item $DL_DIR\Vagrant\Vagrantfile_Lab $DL_DIR\Vagrant\Vagrantfile
+        main
+        Exit
+      }
+      Q
+      {
+        cd $DL_DIR
+        Exit
+      }
+    }
+  }  
+  until ($Menu -eq 'q')
+}
+
+# Call selection menu here for boxes based on Vagrantfile
+Menu
+break
