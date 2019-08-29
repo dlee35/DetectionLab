@@ -334,7 +334,7 @@ function vagrant_up_host {
   $CurrentDir = Get-Location
   Set-Location "$DL_DIR\Vagrant"
   set VAGRANT_LOG=info
-  &vagrant.exe @('up', $VagrantHost, '--provider', "$ProviderName") 2>&1 | Out-File -FilePath ".\vagrant_up_$VagrantHost.log"
+  &vagrant.exe @('up', $VagrantHost, '--provider', "$ProviderName") 2>&1 | Out-File -FilePath ".\logs\vagrant_up_$VagrantHost.log"
   Set-Location $CurrentDir
   Write-Host "[vagrant_up_host] Finished for $VagrantHost. Got exit code: $LASTEXITCODE"
   return $LASTEXITCODE
@@ -347,7 +347,7 @@ function vagrant_reload_host {
   Write-Host "[vagrant_reload_host] Running for $VagrantHost"
   $CurrentDir = Get-Location
   Set-Location "$DL_DIR\Vagrant"
-  &vagrant.exe @('reload', $VagrantHost, '--provision') 2>&1 | Out-File -FilePath ".\vagrant_up_$VagrantHost.log" -Append
+  &vagrant.exe @('reload', $VagrantHost, '--provision') 2>&1 | Out-File -FilePath ".\logs\vagrant_up_$VagrantHost.log" -Append
   Set-Location $CurrentDir
   Write-Host "[vagrant_reload_host] Finished for $VagrantHost. Got exit code: $LASTEXITCODE"
   return $LASTEXITCODE
@@ -362,7 +362,7 @@ function vagrant_halt_host {
   $CurrentDir = Get-Location
   Set-Location "$DL_DIR\Vagrant"
   set VAGRANT_LOG=info
-  &vagrant.exe @('halt', $VagrantHost) 2>&1 | Out-File -FilePath ".\vagrant_halt_$VagrantHost.log"
+  &vagrant.exe @('halt', $VagrantHost) 2>&1 | Out-File -FilePath ".\logs\vagrant_halt_$VagrantHost.log"
   Set-Location $CurrentDir
   Write-Host "[vagrant_halt_host] Finished for $VagrantHost. Got exit code: $LASTEXITCODE"
   return $LASTEXITCODE
@@ -377,7 +377,7 @@ function vagrant_destroy_host {
   $CurrentDir = Get-Location
   Set-Location "$DL_DIR\Vagrant"
   set VAGRANT_LOG=info
-  &vagrant.exe @('destroy', '-f', $VagrantHost) 2>&1 | Out-File -FilePath ".\vagrant_destroy_$VagrantHost.log"
+  &vagrant.exe @('destroy', '-f', $VagrantHost) 2>&1 | Out-File -FilePath ".\logs\vagrant_destroy_$VagrantHost.log"
   Set-Location $CurrentDir
   Write-Host "[vagrant_destroy_host] Finished for $VagrantHost. Got exit code: $LASTEXITCODE"
   return $LASTEXITCODE
