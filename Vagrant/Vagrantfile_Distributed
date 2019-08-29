@@ -129,9 +129,9 @@ Vagrant.configure("2") do |config|
     end
 
     cfg.vm.provider "virtualbox" do |vb, override|
-      override.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.200", auto_config: false
       vb.gui = false
       vb.name = "DEMO-SOMASTER"
+      override.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.200", auto_config: false
       vb.customize ["modifyvm", :id, "--memory", 8192]
       vb.customize ["modifyvm", :id, "--cpus", 4]
       vb.customize ["modifyvm", :id, "--vram", "32"]
@@ -262,7 +262,6 @@ Vagrant.configure("2") do |config|
     cfg.vm.hostname = "web"
     config.vm.provision :shell, path: "bootstrap.sh"
     config.vm.provision "reload"
-    cfg.vm.network :private_network, virtualbox__intnet: "intnet", auto_config: false
 
     cfg.vm.provider "vmware_desktop" do |v, override|
       v.vmx["displayname"] = "DEMO-WEB"
@@ -281,6 +280,7 @@ Vagrant.configure("2") do |config|
     cfg.vm.provider "virtualbox" do |vb, override|
       vb.gui = false
       vb.name = "DEMO-WEB"
+      override.vm.network :private_network, virtualbox__intnet: "intnet", auto_config: false
       vb.customize ["modifyvm", :id, "--memory", 2048]
       vb.customize ["modifyvm", :id, "--cpus", 2]
       vb.customize ["modifyvm", :id, "--vram", "32"]
@@ -302,7 +302,6 @@ Vagrant.configure("2") do |config|
     cfg.winrm.basic_auth_only = true
     cfg.winrm.timeout = 300
     cfg.winrm.retry_limit = 20
-    cfg.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.211", gateway: "172.16.163.222"
 
     cfg.vm.provision "shell", path: "scripts/fix-second-network.ps1", run: "always", privileged: false, args: "172.16.163.211"
     cfg.vm.provision "shell", path: "scripts/provision.ps1", privileged: false
@@ -329,6 +328,10 @@ Vagrant.configure("2") do |config|
 
     cfg.vm.provider "vmware_desktop" do |v, override|
       v.vmx["displayname"] = "DEMO-DC"
+      v.vmx["ethernet1.connectiontype"] = "custom"
+      v.vmx["ethernet1.present"] = "TRUE"
+      v.vmx["ethernet1.virtualdev"] = "e1000"
+      v.vmx["ethernet1.vnet"] = "VMnet7"
       v.memory = 3072
       v.cpus = 2
       v.gui = true
@@ -339,6 +342,7 @@ Vagrant.configure("2") do |config|
       vb.gui = false
       vb.name = "DEMO-DC"
       vb.default_nic_type = "82545EM"
+      override.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.211", gateway: "172.16.163.222"
       vb.customize ["modifyvm", :id, "--memory", 3072]
       vb.customize ["modifyvm", :id, "--cpus", 2]
       vb.customize ["modifyvm", :id, "--vram", "32"]
