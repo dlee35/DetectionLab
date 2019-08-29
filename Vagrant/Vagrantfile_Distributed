@@ -7,9 +7,9 @@ Vagrant.configure("2") do |config|
     cfg.ssh.username = "vagrant"
     cfg.ssh.password = "vagrant"
     cfg.vm.synced_folder ".", "/vagrant", disabled: true
-    cfg.vm.network "forwarded_port", guest: 80, host: 8080
-    cfg.vm.network "forwarded_port", guest: 443, host: 8443
-    #cfg.vm.network "forwarded_port", guest: 3000, host: 3000
+    cfg.vm.network "forwarded_port", guest: 80, host: 8080, auto_correct: true
+    cfg.vm.network "forwarded_port", guest: 443, host: 8443, auto_correct: true
+    #cfg.vm.network "forwarded_port", guest: 3000, host: 3000, auto_correct: true
 
     cfg.vm.provider "vmware_desktop" do |v, override|
       v.vmx["displayname"] = "DEMO-PFSENSE"
@@ -265,6 +265,10 @@ Vagrant.configure("2") do |config|
 
     cfg.vm.provider "vmware_desktop" do |v, override|
       v.vmx["displayname"] = "DEMO-WEB"
+      v.vmx["ethernet1.connectiontype"] = "custom"
+      v.vmx["ethernet1.present"] = "TRUE"
+      v.vmx["ethernet1.virtualdev"] = "e1000"
+      v.vmx["ethernet1.vnet"] = "VMnet7"
       v.memory = 2048
       v.cpus = 2
       v.gui = true
@@ -303,7 +307,7 @@ Vagrant.configure("2") do |config|
     cfg.winrm.timeout = 300
     cfg.winrm.retry_limit = 20
 
-    cfg.vm.provision "shell", path: "scripts/fix-second-network.ps1", run: "always", privileged: false, args: "172.16.163.211"
+    cfg.vm.provision "shell", path: "scripts/fix-second-network.ps1", run: "always", privileged: false, args: "-ip 172.16.163.211 -dns 172.16.163.211"
     cfg.vm.provision "shell", path: "scripts/provision.ps1", privileged: false
     cfg.vm.provision "reload"
     cfg.vm.provision "shell", path: "scripts/provision.ps1", privileged: false

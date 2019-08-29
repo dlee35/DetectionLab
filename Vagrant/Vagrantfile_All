@@ -1,4 +1,4 @@
-# ORIGINAL VAGRANTFILE FOR EVERY MACHINE
+# ALL VAGRANTFILE FOR EVERY MACHINE
 Vagrant.configure("2") do |config|
   config.vm.define "pfsense" do |cfg|
     cfg.vm.box = "dlee35/pfsense"

@@ -7,9 +7,9 @@ Vagrant.configure("2") do |config|
     cfg.ssh.username = "vagrant"
     cfg.ssh.password = "vagrant"
     cfg.vm.synced_folder ".", "/vagrant", disabled: true
-    cfg.vm.network "forwarded_port", guest: 80, host: 8080
-    cfg.vm.network "forwarded_port", guest: 443, host: 8443
-    #cfg.vm.network "forwarded_port", guest: 3000, host: 3000
+    cfg.vm.network "forwarded_port", guest: 80, host: 8080, auto_correct: true
+    cfg.vm.network "forwarded_port", guest: 443, host: 8443, auto_correct: true
+    #cfg.vm.network "forwarded_port", guest: 3000, host: 3000, auto_correct: true
 
     cfg.vm.provider "vmware_desktop" do |v, override|
       v.vmx["displayname"] = "LAB-PFSENSE"
@@ -52,15 +52,20 @@ Vagrant.configure("2") do |config|
       v.vmx["ethernet1.present"] = "TRUE"
       v.vmx["ethernet1.virtualdev"] = "e1000"
       v.vmx["ethernet1.vnet"] = "VMnet7"
+      v.vmx["ethernet2.connectiontype"] = "custom"
+      v.vmx["ethernet2.present"] = "TRUE"
+      v.vmx["ethernet2.virtualdev"] = "e1000"
+      v.vmx["ethernet2.vnet"] = "VMnet6"
       v.memory = 8192
       v.cpus = 4
       v.gui = true
     end
 
     cfg.vm.provider "virtualbox" do |vb, override|
-      override.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.200", auto_config: false
       vb.gui = false
       vb.name = "LAB-SECURITYONION"
+      override.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.200", auto_config: false
+      override.vm.network :private_network, virtualbox__intnet: "intnet01", auto_config: false
       vb.customize ["modifyvm", :id, "--memory", 8192]
       vb.customize ["modifyvm", :id, "--cpus", 4]
       vb.customize ["modifyvm", :id, "--vram", "32"]
@@ -83,7 +88,7 @@ Vagrant.configure("2") do |config|
     cfg.winrm.timeout = 300
     cfg.winrm.retry_limit = 20
 
-    cfg.vm.provision "shell", path: "scripts/fix-second-network.ps1", run: "always", privileged: false, args: "172.16.163.211"
+    cfg.vm.provision "shell", path: "scripts/fix-second-network.ps1", run: "always", privileged: false, args: "-ip 172.16.163.211 -dns 172.16.163.211"
     cfg.vm.provision "shell", path: "scripts/provision.ps1", privileged: false
     cfg.vm.provision "reload"
     cfg.vm.provision "shell", path: "scripts/provision.ps1", privileged: false
