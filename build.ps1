@@ -133,7 +133,7 @@ function check_vmware_workstation_installed {
 
 function check_vmware_vagrant_plugin_installed {
   Write-Host '[check_vmware_vagrant_plugin_installed] Running..'
-  if (vagrant plugin list | Select-String 'vagrant-vmware-desktop') {
+  if (vagrant plugin list | Select-String 'vagrant-vmware-workstation') {
     Write-Host 'The vagrant VMware Workstation plugin is no longer supported.'
     Write-Host 'Please upgrade to the VMware Desktop plugin: https://www.vagrantup.com/docs/vmware/installation.html'
     return $false
