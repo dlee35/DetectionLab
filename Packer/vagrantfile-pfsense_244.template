@@ -13,6 +13,8 @@ Vagrant.configure("2") do |config|
     v.name = "pfsense"
     v.memory = 512
     v.cpus = 1
+    v.customize ["modifyvm", :id, "--nictype1", "82540EM"]
+    v.customize ["modifyvm", :id, "--nictype2", "82540EM"]
     v.customize ["modifyvm", :id, "--vram", "32"]
   end
 
