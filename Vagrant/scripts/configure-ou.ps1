@@ -22,19 +22,19 @@ $retrycount = 0
 # https://www.thomasmaurer.ch/wp-content/uploads/2010/07/Screen-shot-2010-07-23-at-17.08.09.png  <= script from here
 do {
     try {
-        if (!([ADSI]::Exists("LDAP://OU=Servers,DC=demo,DC=local")))
+        if (!([ADSI]::Exists("LDAP://OU=Servers,DC=windomain,DC=local")))
         {
             Write-Host "Creating Servers OU..."
-            New-ADOrganizationalUnit -Name "Servers" -Server "dc.demo.local"
+            New-ADOrganizationalUnit -Name "Servers" -Server "dc.windomain.local"
         }
         else
         {
             Write-Host "Servers OU already exists. Moving On."
         }
-        if (!([ADSI]::Exists("LDAP://OU=Workstations,DC=demo,DC=local")))
+        if (!([ADSI]::Exists("LDAP://OU=Workstations,DC=windomain,DC=local")))
         {
             Write-Host "Creating Workstations OU"
-            New-ADOrganizationalUnit -Name "Workstations" -Server "dc.demo.local"
+            New-ADOrganizationalUnit -Name "Workstations" -Server "dc.windomain.local"
         }
         else
         {
