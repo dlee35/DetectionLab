@@ -133,6 +133,15 @@ list_providers() {
   echo "$PROVIDER"
 }
 
+get_lab_hosts() {
+  LAB_HOSTS=$(grep '^ \{1,\}config.vm.define' Vagrantfile | cut -f2 -d\")
+}
+
+get_running_hosts() {
+  cd "$DL_DIR"/Vagrant/ || exit 1
+  LAB_HOSTS=$(vagrant status | grep '  running' | cut -f1 -d\ )
+}
+
 # Check to see if boxes exist in the "Boxes" directory already
 check_boxes_built() {
   BOXES_BUILT=$(find "$DL_DIR"/Boxes -name "*.box" | wc -l)
@@ -150,8 +159,8 @@ check_boxes_built() {
 check_vagrant_instances_exist() {
   cd "$DL_DIR"/Vagrant/ || exit 1
   # Vagrant status has the potential to return a non-zero error code, so we work around it with "|| true"
-  VAGRANT_BUILT=$(vagrant status | grep -c 'not created') || true
-  if [ "$VAGRANT_BUILT" -ne 4 ]; then
+  VAGRANT_BUILT=$(vagrant status | grep -Ec 'created|running|poweroff') || true
+  if [ "$VAGRANT_BUILT" -ne $LAB_HOSTS ]; then
     (echo >&2 "You appear to have already created at least one Vagrant instance. This script does not support pre-created instances. Please either destroy the existing instances or follow the build steps in the README to continue.")
     exit 1
   fi
@@ -254,6 +263,24 @@ vagrant_reload_host() {
   cd "$DL_DIR"/Vagrant || exit 1
   # Attempt to reload the host if the vagrant up command didn't exit cleanly
   $(which vagrant) reload "$HOST" --provision >>"$DL_DIR/Vagrant/vagrant_up_$HOST.log" 2>&1
+  echo "$?"
+}
+
+# Attempts to shutdown a host
+vagrant_halt_host() {
+  HOST="$1"
+  cd "$DL_DIR"/Vagrant || exit 1
+  # Attempt to shutdown the host
+  $(which vagrant) halt "$HOST" >>"$DL_DIR/Vagrant/vagrant_halt_$HOST.log" 2>&1
+  echo "$?"
+}
+
+# Attempts to delete a host
+vagrant_destroy_host() {
+  HOST="$1"
+  cd "$DL_DIR"/Vagrant || exit 1
+  # Attempt to delete the host
+  $(which vagrant) destroy "$HOST" >>"$DL_DIR/Vagrant/vagrant_destroy_$HOST.log" 2>&1
   echo "$?"
 }
 
@@ -402,6 +429,7 @@ main() {
   VAGRANT_ONLY=0
 
   parse_cli_arguments "$@"
+  get_lab_hosts
   preflight_checks
 
   # Build Packer boxes if this isn't a Vagrant-only build
