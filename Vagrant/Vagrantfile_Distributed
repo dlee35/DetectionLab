@@ -39,7 +39,7 @@ Vagrant.configure("2") do |config|
 
   config.vm.define "acng" do |cfg|
     cfg.vm.box = "bento/ubuntu-16.04"
-    cfg.vm.hostname = "acng-test"
+    cfg.vm.hostname = "acng"
     cfg.vbguest.auto_update = true
     config.vm.provision :shell, path: "bootstrap.sh"
     config.vm.provision "reload"
