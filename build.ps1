@@ -273,16 +273,14 @@ function preflight_checks {
       }
     }
 
-    if ($ProviderName -eq 'virtualbox') {
-      # Ensure the vagrant-vbguest plugin is installed
-      Write-Host '[preflight_checks] Checking if vagrant-vbguest is installed for virtualbox..'
-      if (-Not (vagrant plugin list | Select-String 'vagrant-vbguest')) {
-        Write-Output 'The vagrant-vbguest plugin is required and not currently installed. This script will attempt to install it now.'
-        (vagrant plugin install 'vagrant-vbguest')
-        if ($LASTEXITCODE -ne 0) {
-          Write-Error 'Unable to install the vagrant-vbguest plugin. Please try to do so manually and re-run this script.'
-          break
-        }
+    # Ensure the vagrant-vbguest plugin is installed
+    Write-Host '[preflight_checks] Checking if vagrant-vbguest is installed for virtualbox..'
+    if (-Not (vagrant plugin list | Select-String 'vagrant-vbguest')) {
+      Write-Output 'The vagrant-vbguest plugin is required and not currently installed. This script will attempt to install it now.'
+      (vagrant plugin install 'vagrant-vbguest')
+      if ($LASTEXITCODE -ne 0) {
+        Write-Error 'Unable to install the vagrant-vbguest plugin. Please try to do so manually and re-run this script.'
+        break
       }
     }
   }
