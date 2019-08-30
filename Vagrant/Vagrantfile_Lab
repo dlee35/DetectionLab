@@ -41,6 +41,7 @@ Vagrant.configure("2") do |config|
     cfg.vm.provision "reload"
     cfg.vm.provision :shell, path: "scripts/securityonion-setup.sh"
     cfg.vm.provision "reload"
+    cfg.vm.provision :shell, path: "scripts/securityonion-standalone-install.sh"
     cfg.vm.network "forwarded_port", guest: 443, host: 8843, auto_correct: true
 
     cfg.vm.provider "vmware_desktop" do |v, override|
