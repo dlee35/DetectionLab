@@ -37,7 +37,7 @@ apt_install_prerequisites() {
     bash nodesource_setup.sh
     apt-get install -y nodejs
     npm install ngrok && cp ~/node_modules/ngrok/bin/ngrok /usr/sbin/
-    wget wget https://raw.githubusercontent.com/tedsluis/tmux.conf/master/.tmux.conf -O /home/vagrant/.tmux.conf
+    wget https://raw.githubusercontent.com/tedsluis/tmux.conf/master/.tmux.conf -O /home/vagrant/.tmux.conf
     git clone https://github.com/mauri870/ransomware.git /opt/ransomware
     chown -R vagrant.vagrant /opt/ransomware /home/vagrant/.tmux.conf
     if [ -f /vagrant/resources/securityonion/daemon.json ]; then
