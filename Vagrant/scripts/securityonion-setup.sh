@@ -1,3 +1,5 @@
+#!/bin/bash
+
 setup_analyst() {
   if [ $(grep -c 'analyst:' /etc/passwd) -ne 0 ]; then
     echo "'analyst' user has already been added... Skipping"
@@ -61,7 +63,7 @@ fix_static_ip() {
     MGMT_IP=$(ifconfig $ETH_IP | grep 'inet addr' | cut -d ':' -f 2 | cut -d ' ' -f 1)
     if [[ "$MGMT_IP" != "172.16.163."* ]]; then
       echo "Incorrect IP Address settings detected... Attempting to update"
-      cp /usr/share/securityonion/securityonion_setup_again.jpg /usr/share/securityonion.jpg
+      cp /usr/share/securityonion/securityonion_setup_again.jpg /usr/share/securityonion/securityonion.jpg
       cp /etc/network/interfaces /etc/network/interfaces.bak
       echo "" >> /etc/network/interfaces
       echo "auto $ETH_IP" >> /etc/network/interfaces
@@ -93,14 +95,17 @@ fix_static_ip() {
 }
 
 setup_testing() {
-  # Add test files if in dev mode
-  if [ -f /vagrant/resources/securityonion/00proxy ]; then
-    cp /vagrant/resources/securityonion/00proxy /etc/apt/apt.conf.d/00proxy
-  fi
+  HOST=$(hostname)
+  if [ "$HOST" != "securityonion" ]; then
+    # Add test files if in dev mode
+    if [ -f /vagrant/resources/securityonion/00proxy ]; then
+      cp /vagrant/resources/securityonion/00proxy /etc/apt/apt.conf.d/00proxy
+    fi
 
-  if [ -f /vagrant/resources/securityonion/daemon.json ]; then
-    mkdir /etc/docker
-    cp /vagrant/resources/securityonion/daemon.json /etc/docker/daemon.json
+    if [ -f /vagrant/resources/securityonion/daemon.json ]; then
+      mkdir /etc/docker
+      cp /vagrant/resources/securityonion/daemon.json /etc/docker/daemon.json
+    fi
   fi
 
   # Add testing repo for newer packages/containers
@@ -110,7 +115,19 @@ setup_testing() {
   #sudo /usr/sbin/soup -y
 }
 
+enable_features() {
+  if grep -q 'securityonionsolutionselas' /etc/nsm/elasticdownload.conf; then
+    echo "Elastic Features already enabled... Skipping"
+  else
+    HOST=$(hostname)
+    if [ "$HOST" == "securityonion" ]; then
+      sed -i 's/securityonionsolutions/securityonionsolutionselas/' /etc/nsm/elasticdownload.conf
+    fi
+  fi
+}
+
 setup_analyst
 setup_testing
+enable_features
 fix_vagrant_ip
 fix_static_ip
