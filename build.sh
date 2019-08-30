@@ -398,8 +398,6 @@ fi
 }
 
 build_vagrant_hosts() {
-  LAB_HOSTS=("logger" "dc" "wef" "win10")
-
   # Vagrant up each box and attempt to reload one time if it fails
   for VAGRANT_HOST in "${LAB_HOSTS[@]}"; do
     RET=$(vagrant_up_host "$VAGRANT_HOST")
