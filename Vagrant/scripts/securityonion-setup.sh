@@ -36,7 +36,7 @@ fix_vagrant_ip() {
 
 fix_promisc_nic() {
   HOST=$(hostname)
-  if [[ "$HOST" == "sosensor"* || "$HOST" == "securityonion" ]]; then
+  if [[ "$HOST" == *"sosensor"* || "$HOST" == *"solab" ]]; then
     ETH_PROMISC=$(ip link | grep -E 'ens34|enp0s8|eth1' | cut -f 2 -d\: | tr -d [:space:])
     echo "" >> /etc/network/interfaces
     echo "auto $ETH_PROMISC" >> /etc/network/interfaces
@@ -58,45 +58,46 @@ fix_static_ip() {
     echo "Interfaces already configured... Skipping"
   else
     HOST=$(hostname)
-    # Fix mgmt nic if the IP isn't set correctly
-    ETH_IP=$(ip link | grep -E 'ens33|enp0s3|eth0' | cut -f 2 -d\: | tr -d [:space:])
-    MGMT_IP=$(ifconfig $ETH_IP | grep 'inet addr' | cut -d ':' -f 2 | cut -d ' ' -f 1)
-    if [[ "$MGMT_IP" != "172.16.163."* ]]; then
-      echo "Incorrect IP Address settings detected... Attempting to update"
-      cp /usr/share/securityonion/securityonion_setup_again.jpg /usr/share/securityonion/securityonion.jpg
-      cp /etc/network/interfaces /etc/network/interfaces.bak
-      echo "" >> /etc/network/interfaces
-      echo "auto $ETH_IP" >> /etc/network/interfaces
-      echo "iface $ETH_IP inet static" >> /etc/network/interfaces
-      if [ "$HOST" == "somaster" ]; then
-        echo "  address 172.16.163.200" >> /etc/network/interfaces
-      elif [ "$HOST" == "sostorage01" ]; then
-        echo "  address 172.16.163.215" >> /etc/network/interfaces
-      elif [ "$HOST" == "sosensor01" ]; then
-        echo "  address 172.16.163.210" >> /etc/network/interfaces
-      elif [ "$HOST" == "sosensor02" ]; then
-        echo "  address 172.16.163.220" >> /etc/network/interfaces
-      elif [ "$HOST" == "soanalyst01" ]; then
-        echo "  address 172.16.163.101" >> /etc/network/interfaces
-        cp /usr/share/securityonion/securityonion_setup.jpg /usr/share/securityonion.jpg
-      elif [ "$HOST" == "securityonion" ]; then
-        echo "  address 172.16.163.225" >> /etc/network/interfaces
+    if [[ "$HOST" != *"securityonion" && "$HOST" != *"sominimal" ]]; then
+      # Fix mgmt nic if the IP isn't set correctly
+      ETH_IP=$(ip link | grep -E 'ens33|enp0s3|eth0' | cut -f 2 -d\: | tr -d [:space:])
+      MGMT_IP=$(ifconfig $ETH_IP | grep 'inet addr' | cut -d ':' -f 2 | cut -d ' ' -f 1)
+      if [[ "$MGMT_IP" != "172.16.163."* ]]; then
+        echo "Incorrect IP Address settings detected... Attempting to update"
+        cp /usr/share/securityonion/securityonion_setup_again.jpg /usr/share/securityonion/securityonion.jpg
+        cp /etc/network/interfaces /etc/network/interfaces.bak
+        echo "" >> /etc/network/interfaces
+        echo "auto $ETH_IP" >> /etc/network/interfaces
+        echo "iface $ETH_IP inet static" >> /etc/network/interfaces
+        if [[ "$HOST" == *"somaster" ]]; then
+          echo "  address 172.16.163.200" >> /etc/network/interfaces
+        elif [[ "$HOST" == *"sostorage01" ]]; then
+          echo "  address 172.16.163.215" >> /etc/network/interfaces
+        elif [[ "$HOST" == *"sosensor01" ]]; then
+          echo "  address 172.16.163.210" >> /etc/network/interfaces
+        elif [[ "$HOST" == *"sosensor02" ]]; then
+          echo "  address 172.16.163.220" >> /etc/network/interfaces
+        elif [[ "$HOST" == *"soanalyst01" ]]; then
+          echo "  address 172.16.163.101" >> /etc/network/interfaces
+          cp /usr/share/securityonion/securityonion_setup.jpg /usr/share/securityonion.jpg
+        elif [[ "$HOST" == *"solab" ]]; then
+          echo "  address 172.16.163.225" >> /etc/network/interfaces
+        fi
+        echo "  netmask 255.255.255.0" >> /etc/network/interfaces
+        echo "  gateway 172.16.163.222" >> /etc/network/interfaces
+        echo "  post-up route del default" >> /etc/network/interfaces
+        echo "  post-up route add default gw 172.16.163.222" >> /etc/network/interfaces
+        echo "  dns-nameservers 172.16.163.222" >> /etc/network/interfaces
+        fix_promisc_nic
+        sed -i '1i # this configuration was created by the Security Onion setup script.\n' /etc/network/interfaces
       fi
-      echo "  netmask 255.255.255.0" >> /etc/network/interfaces
-      echo "  gateway 172.16.163.222" >> /etc/network/interfaces
-      echo "  post-up route del default" >> /etc/network/interfaces
-      echo "  post-up route add default gw 172.16.163.222" >> /etc/network/interfaces
-      echo "  dns-nameservers 172.16.163.222" >> /etc/network/interfaces
-      fix_promisc_nic
-      sed -i '1i # this configuration was created by the Security Onion setup script.\n' /etc/network/interfaces
     fi
-    #systemctl restart networking
   fi
 }
 
 setup_testing() {
   HOST=$(hostname)
-  if [ "$HOST" != "securityonion" ]; then
+  if [[ "$HOST" != *"securityonion" && "$HOST" != *"solab" ]]; then
     # Add test files if in dev mode
     if [ -f /vagrant/resources/securityonion/00proxy ]; then
       cp /vagrant/resources/securityonion/00proxy /etc/apt/apt.conf.d/00proxy

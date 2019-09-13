@@ -30,7 +30,7 @@
       ],
       "iso_checksum_type": "{{user `iso_checksum_type`}}",
       "iso_checksum": "{{user `iso_checksum`}}",
-      "headless": false,
+      "headless": true,
       "ssh_username": "{{user `ssh_username`}}",
       "ssh_password": "{{user `ssh_password`}}",
       "shutdown_timeout": "2h",
@@ -121,7 +121,7 @@
     "variables": {
     "iso_checksum_type": "md5",
     "iso_checksum": "788d4a659484c3f87085d1487c5040db",
-    "disk_size": "50720",
+    "disk_size": "53687",
     "ssh_username": "vagrant",
     "ssh_password": "vagrant"
     }
