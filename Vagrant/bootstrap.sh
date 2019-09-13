@@ -4,7 +4,7 @@ apt_install_prerequisites() {
   HOST=$(hostname)
   apt-get update
   # Install prerequisites and useful tools
-  if [ "$HOST" == "acng" ]; then
+  if [[ "$HOST" == *"acng" ]]; then
     apt-get install -y apt-cacher-ng apt-transport-https ca-certificates curl software-properties-common
     echo "PassThroughPattern: .*" >> /etc/apt-cacher-ng/acng.conf
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
@@ -17,7 +17,7 @@ apt_install_prerequisites() {
       docker run -d -p 5000:5000 --restart=always --name registry -v /opt/docker/registry/config.yml:/etc/docker/registry/config.yml registry:2
     fi
   fi
-  if [ "$HOST" == "web" ]; then
+  if [[ "$HOST" == *"web" ]]; then
     if [ -f /vagrant/resources/securityonion/00proxy ]; then
       cp /vagrant/resources/securityonion/00proxy /etc/apt/apt.conf.d/00proxy
     fi
@@ -26,7 +26,7 @@ apt_install_prerequisites() {
     unzip latest.zip
     cp -av securityonion-latest/* /var/www/html/
   fi
-  if [ "$HOST" == "malware" ]; then
+  if [[ "$HOST" == *"malware" ]]; then
     apt-get install -y ca-certificates curl software-properties-common git
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
     add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
