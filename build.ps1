@@ -52,7 +52,8 @@ Param(
   [string]$ProviderName,
   [string]$PackerPath = 'C:\Hashicorp\packer.exe',
   [switch]$PackerOnly,
-  [switch]$VagrantOnly
+  [switch]$VagrantOnly,
+  [string]$Option
 )
 
 $DL_DIR = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
@@ -237,7 +238,7 @@ function preflight_checks {
     Write-Host '[preflight_checks] Checking for vagrant instances..'
     $CurrentDir = Get-Location
     Set-Location "$DL_DIR\Vagrant"
-    if (($(vagrant status) | Select-String -Pattern "created|running|poweroff").Count -ne ($LAB_HOSTS).Count) {
+    if (($(vagrant status) | Select-String -Pattern "created \(|running \(|poweroff \(").Count -ne ($LAB_HOSTS).Count) {
       Write-Error 'You appear to have already created at least one Vagrant instance. This script does not support already created instances. Please either destroy the existing instances or follow the build steps in the README to continue.'
       break
     }
@@ -553,79 +554,39 @@ function main {
     #Write-Host "[main] Finished post_build_checks"
 }
 
-function Menu {
+function HaltMenu{
   Clear-Host
   Do
   {
-    Write-Host -Object '*********************************'
-    Write-Host -Object "Security Onion Deployment Options" -ForegroundColor Yellow
-    Write-Host -Object '*********************************'
+    Write-Host -Object '***************************'
+    Write-Host -Object "Security Onion Halt Options" -ForegroundColor Blue
+    Write-Host -Object '***************************'
     Write-Host -Object ''
-    Write-Host -Object '1.  Distributed Demo    - Analyst, Master, Heavy, Forward, pfSense, Apt-Cacher NG, Web, DC'
-    Write-Host -Object '                          172.16.163.0/24 network'
-    Write-Host -Object '                          Vanilla installation without any setup'
-    Write-Host -Object '                          Learn how a distributed Security Onion installation works'
-    Write-Host -Object '                          Integrate any endpoint solution for testing'
+    Write-Host -Object '0.  Halt Current Boxes  - Shutdown currently running machines'
     Write-Host -Object ''
-    Write-Host -Object '2.  Lab Environment     - Security Onion all-in-one, pfSense, DC, WEF, Win10'
-    Write-Host -Object '                          172.16.163.0/24 network'
-    Write-Host -Object '                          Security Onion setup complete w/Elastic Features enabled'
-    Write-Host -Object '                          Sysmon, Autoruns, etc installed on Windows'
-    Write-Host -Object '                          All Windows logs forwarded to WEF box'
-    Write-Host -Object '                          WEF forwards all logs to Security Onion via Winlogbeat'
+    Write-Host -Object '1.  Halt All Boxes      - Shutdown running machines in all environments'
     Write-Host -Object ''
-    Write-Host -Object '3.  All Machines        - The whole enchilada! Please have at least 64GB of RAM to attempt'
-    Write-Host -Object '                          172.16.163.0/24 network'
-    Write-Host -Object '                          Analyst, Master, Heavy, Forward, pfSense,'
-    Write-Host -Object '                          Apt-Cacher NG, Web, DC, WEF, Win10'
-    Write-Host -Object '                          Mimic an entire network with a single `vagrant up`'
-    Write-Host -Object '                          IF YOU HAVE THE RESOURCES! NOT FOR THE FAINT OF HEART!'
+    Write-Host -Object 'M.  Menu'
     Write-Host -Object ''
-    Write-Host -Object '4.  Halt Current Boxes  - Shutdown currently running machines'
-    Write-Host -Object ''
-    Write-Host -Object '5.  Halt All Boxes      - Shutdown running machines in all environments'
-    Write-Host -Object ''
-    Write-Host -Object '99. Destroy Current Env - Delete all machines in the current environment'
-    Write-Host -Object ''
-    Write-Host -Object 'Q. Quit'
-    $Menu = Read-Host -Prompt '(1-5, 99 to destroy, or Q to Quit)'
+    Write-Host -Object 'Q.  Quit'
+    $HaltMenu = Read-Host -Prompt '(0-1, M to Main Menu, or Q to Quit)'
 
-    switch($Menu) {
+    switch($HaltMenu) {
+      0
+      {
+        $VagrantOnly = $true
+        main 'halt'
+        Remove-Item $DL_DIR\Vagrant\Vagrantfile
+        Set-Location "$DL_DIR"
+        Exit
+      }
       1
       {
         $VagrantOnly = $true
-        Copy-Item $DL_DIR\Vagrant\Vagrantfile_Distributed $DL_DIR\Vagrant\Vagrantfile
-        main 'up'
-        Set-Location "$DL_DIR"
-        Exit
-      }
-      2
-      {
-        $VagrantOnly = $true
-        Copy-Item $DL_DIR\Vagrant\Vagrantfile_Lab $DL_DIR\Vagrant\Vagrantfile
-        main 'up'
-        Set-Location "$DL_DIR"
-        Exit
-      }
-      3
-      {
-        $VagrantOnly = $true
-        Copy-Item $DL_DIR\Vagrant\Vagrantfile_All $DL_DIR\Vagrant\Vagrantfile
-        main 'up'
-        Set-Location "$DL_DIR"
-        Exit
-      }
-      4
-      {
-        $VagrantOnly = $true
+        Copy-Item $DL_DIR\Vagrant\Vagrantfile_Minimal $DL_DIR\Vagrant\Vagrantfile
         main 'halt'
-        Remove-Item $DL_DIR\Vagrant\Vagrantfile
-        Set-Location "$DL_DIR"
-        Exit
-      }
-      5
-      {
-        $VagrantOnly = $true
+        Copy-Item $DL_DIR\Vagrant\Vagrantfile_Basic $DL_DIR\Vagrant\Vagrantfile
+        main 'halt'
         Copy-Item $DL_DIR\Vagrant\Vagrantfile_Distributed $DL_DIR\Vagrant\Vagrantfile
         main 'halt'
         Copy-Item $DL_DIR\Vagrant\Vagrantfile_Lab $DL_DIR\Vagrant\Vagrantfile
@@ -636,12 +597,9 @@ function Menu {
         Set-Location "$DL_DIR"
         Exit
       }
-      99
+      M
       {
-        $VagrantOnly = $true
-        main 'destroy'
-        Remove-Item $DL_DIR\Vagrant\Vagrantfile
-        Set-Location "$DL_DIR"
+        Menu
         Exit
       }
       Q
@@ -651,9 +609,211 @@ function Menu {
       }
     }
   }  
-  until ($Menu -eq 'q')
+  until ($HaltMenu -eq 'q')
+}
+
+function DestroyMenu{
+  Clear-Host
+  Do
+  {
+    Write-Host -Object '***************************'
+    Write-Host -Object "Security Onion Halt Options" -ForegroundColor Blue
+    Write-Host -Object '***************************'
+    Write-Host -Object ''
+    Write-Host -Object '0.  Destroy Current Env  - Destroy all machines in current environment'
+    Write-Host -Object ''
+    Write-Host -Object '1.  Destroy All Envs     - Destroy machines in all environments'
+    Write-Host -Object ''
+    Write-Host -Object 'M.  Menu'
+    Write-Host -Object ''
+    Write-Host -Object 'Q.  Quit'
+    $DestroyMenu = Read-Host -Prompt '(0-1, M to Main Menu, or Q to Quit)'
+
+    switch($DestroyMenu) {
+      0
+      {
+        $VagrantOnly = $true
+        main 'destroy'
+        Remove-Item $DL_DIR\Vagrant\Vagrantfile
+        Set-Location "$DL_DIR"
+        Exit
+      }
+      1
+      {
+        $VagrantOnly = $true
+        Copy-Item $DL_DIR\Vagrant\Vagrantfile_Minimal $DL_DIR\Vagrant\Vagrantfile
+        main 'destroy'
+        Copy-Item $DL_DIR\Vagrant\Vagrantfile_Basic $DL_DIR\Vagrant\Vagrantfile
+        main 'destroy'
+        Copy-Item $DL_DIR\Vagrant\Vagrantfile_Distributed $DL_DIR\Vagrant\Vagrantfile
+        main 'destroy'
+        Copy-Item $DL_DIR\Vagrant\Vagrantfile_Lab $DL_DIR\Vagrant\Vagrantfile
+        main 'destroy'
+        Copy-Item $DL_DIR\Vagrant\Vagrantfile_All $DL_DIR\Vagrant\Vagrantfile
+        main 'destroy'
+        Remove-Item $DL_DIR\Vagrant\Vagrantfile
+        Set-Location "$DL_DIR"
+        Exit
+      }
+      M
+      {
+        Clear-Host
+        Menu
+        Exit
+      }
+      Q
+      {
+        cd $DL_DIR
+        Clear-Host
+        Exit
+      }
+    }
+  }  
+  until ($DestroyMenu -eq 'q')
+}
+
+function Menu {
+  Clear-Host
+  Do
+  # TODO:
+  #  - add HH setup
+  #  - add One stop SOC setup
+  #  - add pagination (to help menu first)
+  #  - Vagrantfile must exist
+  #  - 99 runs delete twice (not on error but legit 0)
+  {
+    if ( !$Option -or $Option -gt 5 ) {
+    Write-Host -Object '*********************************'
+    Write-Host -Object "Security Onion Deployment Options" -ForegroundColor Blue
+    Write-Host -Object '*********************************'
+    Write-Host -Object ''
+    Write-Host -Object '1.  Minimal Install     - Single Security Onion Instance (Standalone)'
+    Write-Host -Object ''
+    Write-Host -Object '2.  Standard Install    - Single Security Onion Instance (Standalone)'
+    Write-Host -Object ''
+    Write-Host -Object '3.  Distributed Demo    - Analyst, Master, Heavy, Forward, pfSense, Apt-Cacher NG, Web, DC'
+    Write-Host -Object ''
+    Write-Host -Object '4.  Windows Lab         - Security Onion (Standalone), pfSense, DC, WEF, Win10'
+    Write-Host -Object ''
+    Write-Host -Object '5.  All Machines        - The whole enchilada! Please have at least 64GB of RAM to attempt'
+    Write-Host -Object ''
+    Write-Host -Object '6.  Halt Options'
+    Write-Host -Object ''
+    Write-Host -Object '99. Destroy Options'
+    Write-Host -Object ''
+    Write-Host -Object 'H.  Help'
+    Write-Host -Object ''
+    Write-Host -Object 'Q.  Quit'
+    $Option = Read-Host -Prompt '(1-5, 6 to halt, 99 to destroy, H for Help, or Q to Quit)'
+    }
+
+    switch($Option) {
+      1
+      {
+        $VagrantOnly = $true
+        Copy-Item $DL_DIR\Vagrant\Vagrantfile_Minimal $DL_DIR\Vagrant\Vagrantfile
+        main 'up'
+        Set-Location "$DL_DIR"
+        Exit
+      }
+      2
+      {
+        $VagrantOnly = $true
+        Copy-Item $DL_DIR\Vagrant\Vagrantfile_Basic $DL_DIR\Vagrant\Vagrantfile
+        main 'up'
+        Set-Location "$DL_DIR"
+        Exit
+      }
+      3
+      {
+        $VagrantOnly = $true
+        Copy-Item $DL_DIR\Vagrant\Vagrantfile_Distributed $DL_DIR\Vagrant\Vagrantfile
+        main 'up'
+        Set-Location "$DL_DIR"
+        Exit
+      }
+      4
+      {
+        $VagrantOnly = $true
+        Copy-Item $DL_DIR\Vagrant\Vagrantfile_Lab $DL_DIR\Vagrant\Vagrantfile
+        main 'up'
+        Set-Location "$DL_DIR"
+        Exit
+      }
+      5
+      {
+        $VagrantOnly = $true
+        Copy-Item $DL_DIR\Vagrant\Vagrantfile_All $DL_DIR\Vagrant\Vagrantfile
+        main 'up'
+        Set-Location "$DL_DIR"
+        Exit
+      }
+      6
+      {
+        HaltMenu
+      }
+      99
+      {
+        DestroyMenu
+      }
+      H
+      {
+        Write-Host -Object '*******************'
+        Write-Host -Object "Security Onion Help" -ForegroundColor Blue
+        Write-Host -Object '*******************'
+        Write-Host -Object ''
+        Write-Host -Object '1.  Minimal Install     - Single Security Onion Instance (Standalone)'
+        Write-Host -Object '                          NAT network'
+        Write-Host -Object '                          2 interfaces: mgmt0 & promisc0'
+        Write-Host -Object '                          Setup to use minimal hardware: 2 CPU & 4GB RAM'
+        Write-Host -Object '                          Self installing. Ready to go after the initial build!'
+        Write-Host -Object '                          WARNING: Suricata NIDS and Bro/Zeek logs ONLY!'
+        Write-Host -Object ''
+        Write-Host -Object '2.  Standard Install    - Single Security Onion Instance (Standalone)'
+        Write-Host -Object '                          NAT network'
+        Write-Host -Object '                          2 interfaces: mgmt0 & promisc0'
+        Write-Host -Object '                          Setup to use basic requirements for eval: 4 CPU & 8GB RAM'
+        Write-Host -Object '                          Self installing. Ready to go after the initial build!'
+        Write-Host -Object '                          Full Elastic pipeline and standard integrations'
+        Write-Host -Object ''
+        Write-Host -Object '3.  Distributed Demo    - Analyst, Master, Heavy, Forward, pfSense, Apt-Cacher NG, Web, DC'
+        Write-Host -Object '                          172.16.163.0/24 network'
+        Write-Host -Object '                          Vanilla installation without any setup'
+        Write-Host -Object '                          Learn how a distributed Security Onion installation works'
+        Write-Host -Object '                          Integrate any endpoint solution for testing'
+        Write-Host -Object ''
+        Write-Host -Object '4.  Windows Lab         - Security Onion (Standalone), pfSense, DC, WEF, Win10'
+        Write-Host -Object '                          172.16.163.0/24 network'
+        Write-Host -Object '                          Security Onion setup complete w/Elastic Features enabled'
+        Write-Host -Object '                          Sysmon, Autoruns, Atomic Red Team, Mimikatz installed on Windows'
+        Write-Host -Object '                          All Windows logs forwarded to WEF box via GPO'
+        Write-Host -Object '                          WEF forwards all logs to Security Onion via Winlogbeat'
+        Write-Host -Object ''
+        Write-Host -Object '5.  All Machines        - The whole enchilada! Please have at least 64GB of RAM to attempt'
+        Write-Host -Object '                          172.16.163.0/24 network'
+        Write-Host -Object '                          Analyst, Master, Heavy, Forward, pfSense,'
+        Write-Host -Object '                          Apt-Cacher NG, Web, DC, WEF, Win10'
+        Write-Host -Object '                          Mimic an entire network with a single `vagrant up`'
+        Write-Host -Object '                          IF YOU HAVE THE RESOURCES! NOT FOR THE FAINT OF HEART!'
+        Write-Host -Object ''
+        Write-Host -Object '6.  Halt Menu           - Choose to shut down current env or all running envs'
+        Write-Host -Object ''
+        Write-Host -Object '99. Destroy Menu        - Choose to destroy current env or all machines in every env'
+        Pause
+        Clear-Host
+      }
+      Q
+      {
+        cd $DL_DIR
+        Clear-Host
+        Exit
+      }
+    }
+  }  
+  until ($Option -eq 'q')
 }
 
 # Call selection menu here for boxes based on Vagrantfile
 Menu
+Clear-Host
 break
