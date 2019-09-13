@@ -1,0 +1,37 @@
+# MINIMAL VAGRANTFILE FOR SINGLE SECURITY ONION INSTANCE
+Vagrant.configure("2") do |config|
+  config.vm.define "minimal-securityonion" do |cfg|
+    cfg.vm.box = "dlee35/securityonion"
+    cfg.vm.hostname = "sominimal"
+    cfg.vm.provision :shell, path: "scripts/securityonion-rename-interfaces.sh"
+    cfg.vm.provision "reload"
+    cfg.vm.provision :shell, path: "scripts/securityonion-setup.sh"
+    cfg.vm.provision "reload"
+    cfg.vm.provision :shell, path: "scripts/securityonion-install.sh"
+    cfg.vm.network "forwarded_port", guest: 443, host: 8443, auto_correct: true
+
+    cfg.vm.provider "vmware_desktop" do |v, override|
+      override.vm.synced_folder ".", "/vagrant", type: "rsync"
+      v.vmx["displayname"] = "SECURITYONION-MINIMAL"
+      v.vmx["ethernet1.connectiontype"] = "custom"
+      v.vmx["ethernet1.present"] = "TRUE"
+      v.vmx["ethernet1.virtualdev"] = "e1000"
+      v.vmx["ethernet1.vnet"] = "VMnet7"
+      v.memory = 4096
+      v.cpus = 2
+      v.gui = true
+    end
+
+    cfg.vm.provider "virtualbox" do |vb, override|
+      vb.gui = false
+      vb.name = "SECURITYONION-MINIMAL"
+      override.vm.network :private_network, virtualbox__intnet: "intnet"
+      vb.customize ["modifyvm", :id, "--memory", 4096]
+      vb.customize ["modifyvm", :id, "--cpus", 2]
+      vb.customize ["modifyvm", :id, "--vram", "32"]
+      vb.customize ["modifyvm", :id, "--nicpromisc2", "allow-all"]
+      vb.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
+      vb.customize ["setextradata", "global", "GUI/SuppressMessages", "all" ]
+    end
+  end
+end

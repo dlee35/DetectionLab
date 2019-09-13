@@ -1,6 +1,6 @@
 # DISTRIBUTED VAGRANTFILE FOR SECURITY ONION DEMO
 Vagrant.configure("2") do |config|
-  config.vm.define "pfsense" do |cfg|
+  config.vm.define "distrib-pfsense" do |cfg|
     cfg.vm.box = "dlee35/pfsense"
     cfg.vm.hostname = "pfsense"
     cfg.vbguest.auto_update = false
@@ -35,7 +35,7 @@ Vagrant.configure("2") do |config|
     end
   end
 
-  config.vm.define "acng" do |cfg|
+  config.vm.define "distrib-acng" do |cfg|
     cfg.vm.box = "bento/ubuntu-16.04"
     cfg.vm.hostname = "acng"
     cfg.vbguest.auto_update = true
@@ -71,9 +71,8 @@ Vagrant.configure("2") do |config|
     end
   end
 
-  config.vm.define "soanalyst01" do |cfg|
+  config.vm.define "distrib-soanalyst01" do |cfg|
     cfg.vm.box = "dlee35/securityonion"
-    #cfg.vm.box_version = "16.04.6.1"
     cfg.vm.hostname = "soanalyst01"
     cfg.vm.provision :shell, path: "scripts/securityonion-rename-interfaces.sh"
     cfg.vm.provision "reload"
@@ -105,7 +104,7 @@ Vagrant.configure("2") do |config|
     end
   end
 
-  config.vm.define "somaster" do |cfg|
+  config.vm.define "distrib-somaster" do |cfg|
     cfg.vm.box = "dlee35/securityonion"
     cfg.vm.hostname = "somaster"
     cfg.vm.provision :shell, path: "scripts/securityonion-rename-interfaces.sh"
@@ -142,7 +141,7 @@ Vagrant.configure("2") do |config|
 
   # OPTIONAL STORAGE NODE
   # remove comments to enable and run `vagrant up sostorage01`
-  #config.vm.define "sostorage01" do |cfg|
+  #config.vm.define "distrib-sostorage01" do |cfg|
   #  cfg.vm.box = "dlee35/securityonion"
   #  cfg.vm.hostname = "sostorage01"
   #  cfg.vm.provision :shell, path: "scripts/securityonion-rename-interfaces.sh"
@@ -176,7 +175,7 @@ Vagrant.configure("2") do |config|
   #end
 
   # HEAVY NODE
-  config.vm.define "sosensor01" do |cfg|
+  config.vm.define "distrib-sosensor01" do |cfg|
     cfg.vm.box = "dlee35/securityonion"
     cfg.vm.hostname = "sosensor01"
     cfg.vm.provision :shell, path: "scripts/securityonion-rename-interfaces.sh"
@@ -216,7 +215,7 @@ Vagrant.configure("2") do |config|
   end
 
   # FORWARD NODE
-  config.vm.define "sosensor02" do |cfg|
+  config.vm.define "distrib-sosensor02" do |cfg|
     cfg.vm.box = "dlee35/securityonion"
     cfg.vm.hostname = "sosensor02"
     cfg.vm.provision :shell, path: "scripts/securityonion-rename-interfaces.sh"
@@ -255,7 +254,7 @@ Vagrant.configure("2") do |config|
     end
   end
 
-  config.vm.define "web" do |cfg|
+  config.vm.define "distrib-web" do |cfg|
     cfg.vm.box = "bento/ubuntu-16.04"
     cfg.vm.hostname = "web"
     config.vm.provision :shell, path: "bootstrap.sh"
@@ -293,65 +292,65 @@ Vagrant.configure("2") do |config|
     end
   end
 
-  config.vm.define "dc" do |cfg|
-    cfg.vm.box = "detectionlab/win2016"
-    cfg.vm.hostname = "dc"
-    cfg.vbguest.auto_update = false
-    #cfg.vm.synced_folder "./wazuh", "/opt/wazuh"
-    cfg.vm.boot_timeout = 600
-    cfg.winrm.transport = :plaintext
-    cfg.vm.communicator = "winrm"
-    cfg.winrm.basic_auth_only = true
-    cfg.winrm.timeout = 300
-    cfg.winrm.retry_limit = 20
+  #config.vm.define "distrib-dc" do |cfg|
+  #  cfg.vm.box = "detectionlab/win2016"
+  #  cfg.vm.hostname = "dc"
+  #  cfg.vbguest.auto_update = false
+  #  #cfg.vm.synced_folder "./wazuh", "/opt/wazuh"
+  #  cfg.vm.boot_timeout = 600
+  #  cfg.winrm.transport = :plaintext
+  #  cfg.vm.communicator = "winrm"
+  #  cfg.winrm.basic_auth_only = true
+  #  cfg.winrm.timeout = 300
+  #  cfg.winrm.retry_limit = 20
 
-    cfg.vm.provision "shell", path: "scripts/fix-second-network.ps1", run: "always", privileged: false, args: "-ip 172.16.163.211 -dns 172.16.163.211"
-    cfg.vm.provision "shell", path: "scripts/provision.ps1", privileged: false
-    cfg.vm.provision "reload"
-    cfg.vm.provision "shell", path: "scripts/provision.ps1", privileged: false
-    cfg.vm.provision "shell", path: "scripts/download_palantir_wef.ps1", privileged: false
-    cfg.vm.provision "shell", path: "scripts/download_palantir_osquery.ps1", privileged: false
-    #cfg.vm.provision "shell", path: "scripts/install-splunkuf.ps1", privileged: false
-    #cfg.vm.provision "shell", path: "scripts/install-inputsconf.ps1", privileged: false
-    cfg.vm.provision "shell", path: "scripts/install-utilities.ps1", privileged: false
-    cfg.vm.provision "shell", path: "scripts/install-redteam.ps1", privileged: false
-    #cfg.vm.provision "shell", path: "scripts/install-choco-extras.ps1", privileged: false
-    #cfg.vm.provision "shell", path: "scripts/install-osquery.ps1", privileged: false
-    cfg.vm.provision "shell", path: "scripts/install-sysinternals.ps1", privileged: false
-    cfg.vm.provision "shell", path: "scripts/configure-ou.ps1", privileged: false
-    cfg.vm.provision "shell", path: "scripts/configure-wef-gpo.ps1", privileged: false
-    cfg.vm.provision "shell", path: "scripts/configure-powershelllogging.ps1", privileged: false
-    cfg.vm.provision "shell", path: "scripts/configure-AuditingPolicyGPOs.ps1", privileged: false
-    cfg.vm.provision "shell", path: "scripts/configure-rdp-user-gpo.ps1", privileged: false
-    cfg.vm.provision "shell", path: "scripts/configure-disable-windows-defender-gpo.ps1", privileged: false
-    cfg.vm.provision "shell", path: "scripts/install-autorunstowineventlog.ps1", privileged: false
-    cfg.vm.provision "shell", inline: 'wevtutil el | Select-String -notmatch "Microsoft-Windows-LiveId" | Foreach-Object {wevtutil cl "$_"}', privileged: false
-    cfg.vm.provision "shell", inline: "Set-SmbServerConfiguration -AuditSmb1Access $true -Force", privileged: false
+  #  cfg.vm.provision "shell", path: "scripts/fix-second-network.ps1", run: "always", privileged: false, args: "-ip 172.16.163.211 -dns 172.16.163.211"
+  #  cfg.vm.provision "shell", path: "scripts/provision.ps1", privileged: false
+  #  cfg.vm.provision "reload"
+  #  cfg.vm.provision "shell", path: "scripts/provision.ps1", privileged: false
+  #  cfg.vm.provision "shell", path: "scripts/download_palantir_wef.ps1", privileged: false
+  #  cfg.vm.provision "shell", path: "scripts/download_palantir_osquery.ps1", privileged: false
+  #  #cfg.vm.provision "shell", path: "scripts/install-splunkuf.ps1", privileged: false
+  #  #cfg.vm.provision "shell", path: "scripts/install-inputsconf.ps1", privileged: false
+  #  cfg.vm.provision "shell", path: "scripts/install-utilities.ps1", privileged: false
+  #  cfg.vm.provision "shell", path: "scripts/install-redteam.ps1", privileged: false
+  #  #cfg.vm.provision "shell", path: "scripts/install-choco-extras.ps1", privileged: false
+  #  #cfg.vm.provision "shell", path: "scripts/install-osquery.ps1", privileged: false
+  #  cfg.vm.provision "shell", path: "scripts/install-sysinternals.ps1", privileged: false
+  #  cfg.vm.provision "shell", path: "scripts/configure-ou.ps1", privileged: false
+  #  cfg.vm.provision "shell", path: "scripts/configure-wef-gpo.ps1", privileged: false
+  #  cfg.vm.provision "shell", path: "scripts/configure-powershelllogging.ps1", privileged: false
+  #  cfg.vm.provision "shell", path: "scripts/configure-AuditingPolicyGPOs.ps1", privileged: false
+  #  cfg.vm.provision "shell", path: "scripts/configure-rdp-user-gpo.ps1", privileged: false
+  #  cfg.vm.provision "shell", path: "scripts/configure-disable-windows-defender-gpo.ps1", privileged: false
+  #  cfg.vm.provision "shell", path: "scripts/install-autorunstowineventlog.ps1", privileged: false
+  #  cfg.vm.provision "shell", inline: 'wevtutil el | Select-String -notmatch "Microsoft-Windows-LiveId" | Foreach-Object {wevtutil cl "$_"}', privileged: false
+  #  cfg.vm.provision "shell", inline: "Set-SmbServerConfiguration -AuditSmb1Access $true -Force", privileged: false
 
-    cfg.vm.provider "vmware_desktop" do |v, override|
-      v.vmx["displayname"] = "DEMO-DC"
-      v.vmx["ethernet1.connectiontype"] = "custom"
-      v.vmx["ethernet1.present"] = "TRUE"
-      v.vmx["ethernet1.virtualdev"] = "e1000"
-      v.vmx["ethernet1.vnet"] = "VMnet7"
-      v.memory = 3072
-      v.cpus = 2
-      v.gui = true
-      v.enable_vmrun_ip_lookup = false
-    end
+  #  cfg.vm.provider "vmware_desktop" do |v, override|
+  #    v.vmx["displayname"] = "DEMO-DC"
+  #    v.vmx["ethernet1.connectiontype"] = "custom"
+  #    v.vmx["ethernet1.present"] = "TRUE"
+  #    v.vmx["ethernet1.virtualdev"] = "e1000"
+  #    v.vmx["ethernet1.vnet"] = "VMnet7"
+  #    v.memory = 3072
+  #    v.cpus = 2
+  #    v.gui = true
+  #    v.enable_vmrun_ip_lookup = false
+  #  end
 
-    cfg.vm.provider "virtualbox" do |vb, override|
-      vb.gui = false
-      vb.name = "DEMO-DC"
-      vb.default_nic_type = "82545EM"
-      override.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.211", gateway: "172.16.163.222"
-      vb.customize ["modifyvm", :id, "--memory", 3072]
-      vb.customize ["modifyvm", :id, "--cpus", 2]
-      vb.customize ["modifyvm", :id, "--vram", "32"]
-      vb.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
-      vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
-      vb.customize ["setextradata", "global", "GUI/SuppressMessages", "all" ]
-      vb.customize ["modifyvm", :id, "--groups", "/DEMO"]
-    end
-  end
+  #  cfg.vm.provider "virtualbox" do |vb, override|
+  #    vb.gui = false
+  #    vb.name = "DEMO-DC"
+  #    vb.default_nic_type = "82545EM"
+  #    override.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.211", gateway: "172.16.163.222"
+  #    vb.customize ["modifyvm", :id, "--memory", 3072]
+  #    vb.customize ["modifyvm", :id, "--cpus", 2]
+  #    vb.customize ["modifyvm", :id, "--vram", "32"]
+  #    vb.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
+  #    vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+  #    vb.customize ["setextradata", "global", "GUI/SuppressMessages", "all" ]
+  #    vb.customize ["modifyvm", :id, "--groups", "/DEMO"]
+  #  end
+  #end
 end

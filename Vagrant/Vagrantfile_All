@@ -1,6 +1,6 @@
 # ALL VAGRANTFILE FOR EVERY MACHINE
 Vagrant.configure("2") do |config|
-  config.vm.define "pfsense" do |cfg|
+  config.vm.define "all-pfsense" do |cfg|
     cfg.vm.box = "dlee35/pfsense"
     cfg.vm.hostname = "pfsense"
     cfg.vbguest.auto_update = false
@@ -10,7 +10,7 @@ Vagrant.configure("2") do |config|
     #cfg.vm.network "forwarded_port", guest: 3000, host: 3000, auto_correct: true
 
     cfg.vm.provider "vmware_desktop" do |v, override|
-      v.vmx["displayname"] = "PFSENSE"
+      v.vmx["displayname"] = "ALL-PFSENSE"
       v.vmx["ethernet0.virtualDev"] = "e1000"
       v.vmx["ethernet0.pciSlotNumber"] = "32"
       v.vmx["ethernet0.connectiontype"] = "nat"
@@ -25,7 +25,7 @@ Vagrant.configure("2") do |config|
     end
 
     cfg.vm.provider :virtualbox do |vb, override|
-      vb.name = "PFSENSE"
+      vb.name = "ALL-PFSENSE"
       vb.gui = false
       override.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.222", auto_config: false
       vb.memory = 512
@@ -33,16 +33,31 @@ Vagrant.configure("2") do |config|
     end
   end
 
-  config.vm.define "acng" do |cfg|
+  config.vm.define "all-acng" do |cfg|
     cfg.vm.box = "bento/ubuntu-16.04"
     cfg.vm.hostname = "acng-test"
     cfg.vbguest.auto_update = true
     config.vm.provision :shell, path: "bootstrap.sh"
     config.vm.provision "reload"
 
+    cfg.vm.provider "vmware_desktop" do |v, override|
+      v.vmx["displayname"] = "ALL-ACNG"
+      v.vmx["ethernet0.virtualDev"] = "e1000"
+      v.vmx["ethernet0.pciSlotNumber"] = "32"
+      v.vmx["ethernet0.connectiontype"] = "nat"
+      v.vmx["ethernet1.present"] = "true"
+      v.vmx["ethernet1.virtualDev"] = "e1000"
+      v.vmx["ethernet1.pciSlotNumber"] = "33"
+      v.vmx["ethernet1.connectiontype"] = "custom"
+      v.vmx["ethernet1.vnet"] = "VMnet7"
+      v.memory = 512
+      v.cpus = 1
+      v.gui = true
+    end
+
     cfg.vm.provider "virtualbox" do |vb, override|
       vb.gui = false
-      vb.name = "ACNG"
+      vb.name = "ALL-ACNG"
       override.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.223", auto_config: false
       vb.customize ["modifyvm", :id, "--memory", 512]
       vb.customize ["modifyvm", :id, "--cpus", 1]
@@ -53,7 +68,7 @@ Vagrant.configure("2") do |config|
     end
   end
 
-  config.vm.define "soanalyst01" do |cfg|
+  config.vm.define "all-soanalyst01" do |cfg|
     cfg.vm.box = "dlee35/securityonion"
     #cfg.vm.box_version = "16.04.6.1"
     cfg.vm.hostname = "soanalyst01"
@@ -64,7 +79,7 @@ Vagrant.configure("2") do |config|
 
     cfg.vm.provider "vmware_desktop" do |v, override|
       override.vm.synced_folder ".", "/vagrant", type: "rsync"
-      v.vmx["displayname"] = "SOANALYST01"
+      v.vmx["displayname"] = "ALL-SOANALYST01"
       v.vmx["ethernet1.connectiontype"] = "custom"
       v.vmx["ethernet1.present"] = "TRUE"
       v.vmx["ethernet1.virtualdev"] = "e1000"
@@ -76,7 +91,7 @@ Vagrant.configure("2") do |config|
 
     cfg.vm.provider "virtualbox" do |vb, override|
       vb.gui = false
-      vb.name = "SOANALYST01"
+      vb.name = "ALL-SOANALYST01"
       override.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.101", auto_config: false
       vb.customize ["modifyvm", :id, "--memory", 2048]
       vb.customize ["modifyvm", :id, "--cpus", 2]
@@ -86,7 +101,7 @@ Vagrant.configure("2") do |config|
     end
   end
 
-  config.vm.define "somaster" do |cfg|
+  config.vm.define "all-somaster" do |cfg|
     cfg.vm.box = "dlee35/securityonion"
     cfg.vm.hostname = "somaster"
     cfg.vm.provision :shell, path: "scripts/securityonion-rename-interfaces.sh"
@@ -97,7 +112,7 @@ Vagrant.configure("2") do |config|
 
     cfg.vm.provider "vmware_desktop" do |v, override|
       override.vm.synced_folder ".", "/vagrant", type: "rsync"
-      v.vmx["displayname"] = "SOMASTER01"
+      v.vmx["displayname"] = "ALL-SOMASTER"
       v.vmx["ethernet1.connectiontype"] = "custom"
       v.vmx["ethernet1.present"] = "TRUE"
       v.vmx["ethernet1.virtualdev"] = "e1000"
@@ -109,7 +124,7 @@ Vagrant.configure("2") do |config|
 
     cfg.vm.provider "virtualbox" do |vb, override|
       vb.gui = false
-      vb.name = "SOMASTER01"
+      vb.name = "ALL-SOMASTER"
       override.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.200", auto_config: false
       vb.customize ["modifyvm", :id, "--memory", 8192]
       vb.customize ["modifyvm", :id, "--cpus", 4]
@@ -120,7 +135,7 @@ Vagrant.configure("2") do |config|
     end
   end
 
-  config.vm.define "sostorage01" do |cfg|
+  config.vm.define "all-sostorage01" do |cfg|
     cfg.vm.box = "dlee35/securityonion"
     cfg.vm.hostname = "sostorage01"
     cfg.vm.provision :shell, path: "scripts/securityonion-rename-interfaces.sh"
@@ -130,7 +145,7 @@ Vagrant.configure("2") do |config|
 
     cfg.vm.provider "vmware_desktop" do |v, override|
       override.vm.synced_folder ".", "/vagrant", type: "rsync"
-      v.vmx["displayname"] = "SOSTORAGE01"
+      v.vmx["displayname"] = "ALL-SOSTORAGE01"
       v.vmx["ethernet1.connectiontype"] = "custom"
       v.vmx["ethernet1.present"] = "TRUE"
       v.vmx["ethernet1.virtualdev"] = "e1000"
@@ -142,7 +157,7 @@ Vagrant.configure("2") do |config|
 
     cfg.vm.provider "virtualbox" do |vb, override|
       vb.gui = false
-      vb.name = "SOSTORAGE01"
+      vb.name = "ALL-SOSTORAGE01"
       override.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.215", auto_config: false
       vb.customize ["modifyvm", :id, "--memory", 8192]
       vb.customize ["modifyvm", :id, "--cpus", 4]
@@ -152,7 +167,7 @@ Vagrant.configure("2") do |config|
     end
   end
 
-  config.vm.define "sosensor01" do |cfg|
+  config.vm.define "all-sosensor01" do |cfg|
     cfg.vm.box = "dlee35/securityonion"
     cfg.vm.hostname = "sosensor01"
     cfg.vm.provision :shell, path: "scripts/securityonion-rename-interfaces.sh"
@@ -162,7 +177,7 @@ Vagrant.configure("2") do |config|
 
     cfg.vm.provider "vmware_desktop" do |v, override|
       override.vm.synced_folder ".", "/vagrant", type: "rsync"
-      v.vmx["displayname"] = "SOSENSOR01"
+      v.vmx["displayname"] = "ALL-SOSENSOR01"
       v.vmx["ethernet1.connectiontype"] = "custom"
       v.vmx["ethernet1.present"] = "TRUE"
       v.vmx["ethernet1.virtualdev"] = "e1000"
@@ -178,7 +193,7 @@ Vagrant.configure("2") do |config|
 
     cfg.vm.provider "virtualbox" do |vb, override|
       vb.gui = false
-      vb.name = "SOSENSOR01"
+      vb.name = "ALL-SOSENSOR01"
       override.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.210", auto_config: false
       override.vm.network :private_network, virtualbox__intnet: "intnet01", auto_config: false
       vb.customize ["modifyvm", :id, "--memory", 8192]
@@ -190,7 +205,7 @@ Vagrant.configure("2") do |config|
     end
   end
 
-  config.vm.define "sosensor02" do |cfg|
+  config.vm.define "all-sosensor02" do |cfg|
     cfg.vm.box = "dlee35/securityonion"
     cfg.vm.hostname = "sosensor02"
     cfg.vm.provision :shell, path: "scripts/securityonion-rename-interfaces.sh"
@@ -200,7 +215,7 @@ Vagrant.configure("2") do |config|
 
     cfg.vm.provider "vmware_desktop" do |v, override|
       override.vm.synced_folder ".", "/vagrant", type: "rsync"
-      v.vmx["displayname"] = "SOSENSOR02"
+      v.vmx["displayname"] = "ALL-SOSENSOR02"
       v.vmx["ethernet1.connectiontype"] = "custom"
       v.vmx["ethernet1.present"] = "TRUE"
       v.vmx["ethernet1.virtualdev"] = "e1000"
@@ -216,7 +231,7 @@ Vagrant.configure("2") do |config|
 
     cfg.vm.provider "virtualbox" do |vb, override|
       vb.gui = false
-      vb.name = "SOSENSOR02"
+      vb.name = "ALL-SOSENSOR02"
       override.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.220", auto_config: false
       override.vm.network :private_network, virtualbox__intnet: "intnet", auto_config: false
       vb.customize ["modifyvm", :id, "--memory", 4096]
@@ -228,11 +243,33 @@ Vagrant.configure("2") do |config|
     end
   end
 
-  config.vm.define "web" do |cfg|
+  config.vm.define "all-web" do |cfg|
     cfg.vm.box = "bento/ubuntu-16.04"
     cfg.vm.hostname = "web"
     config.vm.provision :shell, path: "bootstrap.sh"
     config.vm.provision "reload"
+
+    cfg.vm.provider "vmware_desktop" do |v, override|
+      v.vmx["displayname"] = "ALL-WEB"
+      v.vmx["ethernet1.connectiontype"] = "custom"
+      v.vmx["ethernet1.present"] = "TRUE"
+      v.vmx["ethernet1.virtualdev"] = "e1000"
+      v.vmx["ethernet1.vnet"] = "VMnet7"
+      v.memory = 2048
+      v.cpus = 2
+      v.gui = true
+    end
+
+    cfg.vm.provider "vmware_desktop" do |v, override|
+      v.vmx["displayname"] = "ALL-WEB"
+      v.vmx["ethernet1.connectiontype"] = "custom"
+      v.vmx["ethernet1.present"] = "TRUE"
+      v.vmx["ethernet1.virtualdev"] = "e1000"
+      v.vmx["ethernet1.vnet"] = "VMnet7"
+      v.memory = 2048
+      v.cpus = 2
+      v.gui = true
+    end
 
     cfg.vm.provider "virtualbox" do |vb, override|
       vb.gui = false
@@ -245,27 +282,9 @@ Vagrant.configure("2") do |config|
       vb.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
       vb.customize ["setextradata", "global", "GUI/SuppressMessages", "all" ]
     end
-
-    cfg.vm.provider "vmware_fusion" do |v, override|
-      v.vmx["displayname"] = "WEB"
-      v.memory = 2048
-      v.cpus = 1
-      v.gui = true
-    end
-
-    cfg.vm.provider "vmware_desktop" do |v, override|
-      v.vmx["displayname"] = "WEB"
-      v.vmx["ethernet1.connectiontype"] = "custom"
-      v.vmx["ethernet1.present"] = "TRUE"
-      v.vmx["ethernet1.virtualdev"] = "e1000"
-      v.vmx["ethernet1.vnet"] = "VMnet7"
-      v.memory = 2048
-      v.cpus = 2
-      v.gui = true
-    end
   end
-
-  config.vm.define "dc" do |cfg|
+    
+  config.vm.define "all-dc" do |cfg|
     cfg.vm.box = "detectionlab/win2016"
     cfg.vm.hostname = "dc"
     cfg.vbguest.auto_update = false
@@ -301,7 +320,7 @@ Vagrant.configure("2") do |config|
     cfg.vm.provision "shell", inline: "Set-SmbServerConfiguration -AuditSmb1Access $true -Force", privileged: false
 
     cfg.vm.provider "vmware_desktop" do |v, override|
-      v.vmx["displayname"] = "DC"
+      v.vmx["displayname"] = "ALL-DC"
       v.vmx["ethernet1.connectiontype"] = "custom"
       v.vmx["ethernet1.present"] = "TRUE"
       v.vmx["ethernet1.virtualdev"] = "e1000"
@@ -314,7 +333,7 @@ Vagrant.configure("2") do |config|
 
     cfg.vm.provider "virtualbox" do |vb, override|
       vb.gui = false
-      vb.name = "DC"
+      vb.name = "ALL-DC"
       vb.default_nic_type = "82545EM"
       override.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.211", gateway: "172.16.163.222"
       vb.customize ["modifyvm", :id, "--memory", 3072]
@@ -326,7 +345,7 @@ Vagrant.configure("2") do |config|
     end
   end
 
-  config.vm.define "wef" do |cfg|
+  config.vm.define "all-wef" do |cfg|
     cfg.vm.box = "detectionlab/win2016"
     cfg.vm.hostname = "wef"
     cfg.vm.boot_timeout = 600
@@ -358,7 +377,7 @@ Vagrant.configure("2") do |config|
     cfg.vm.provision "shell", path: "scripts/install-microsoft-ata.ps1", privileged: false
 
     cfg.vm.provider "vmware_desktop" do |v, override|
-      v.vmx["displayname"] = "WEF"
+      v.vmx["displayname"] = "ALL-WEF"
       v.vmx["ethernet1.connectiontype"] = "custom"
       v.vmx["ethernet1.present"] = "TRUE"
       v.vmx["ethernet1.virtualdev"] = "e1000"
@@ -371,7 +390,7 @@ Vagrant.configure("2") do |config|
 
     cfg.vm.provider "virtualbox" do |vb, override|
       vb.gui = false
-      vb.name = "WEF"
+      vb.name = "ALL-WEF"
       vb.default_nic_type = "82545EM"
       override.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.212", gateway: "172.16.163.222"
       vb.customize ["modifyvm", :id, "--memory", 2048]
@@ -383,7 +402,7 @@ Vagrant.configure("2") do |config|
     end
   end
 
-  config.vm.define "win10" do |cfg|
+  config.vm.define "all-win10" do |cfg|
     cfg.vm.box = "detectionlab/win10"
     cfg.vm.hostname = "win10"
     cfg.vm.boot_timeout = 1200
@@ -410,7 +429,7 @@ Vagrant.configure("2") do |config|
     cfg.vm.provision "shell", path: "scripts/install-autorunstowineventlog.ps1", privileged: false
 
     cfg.vm.provider "vmware_desktop" do |v, override|
-      v.vmx["displayname"] = "WIN10"
+      v.vmx["displayname"] = "ALL-WIN10"
       v.vmx["gui.fullscreenatpoweron"] = "FALSE"
       v.vmx["gui.viewModeAtPowerOn"] = "windowed"
       v.vmx["ethernet1.connectiontype"] = "custom"
@@ -425,7 +444,7 @@ Vagrant.configure("2") do |config|
 
     cfg.vm.provider "virtualbox" do |vb, override|
       vb.gui = false
-      vb.name = "WIN10"
+      vb.name = "ALL-WIN10"
       vb.default_nic_type = "82545EM"
       override.vm.network :private_network, virtualbox__intnet: "intnet", ip: "172.16.163.100", gateway: "172.16.163.222", dns: "172.16.163.211"
       vb.customize ["modifyvm", :id, "--memory", 2048]

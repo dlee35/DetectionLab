@@ -1,6 +1,6 @@
 # LAB VAGRANTFILE WITH SUBSET OF MACHINES
 Vagrant.configure("2") do |config|
-  config.vm.define "pfsense" do |cfg|
+  config.vm.define "lab-pfsense" do |cfg|
     cfg.vm.box = "dlee35/pfsense"
     cfg.vm.hostname = "pfsense"
     cfg.vbguest.auto_update = false
@@ -34,14 +34,14 @@ Vagrant.configure("2") do |config|
     end
   end
 
-  config.vm.define "securityonion" do |cfg|
+  config.vm.define "lab-securityonion" do |cfg|
     cfg.vm.box = "dlee35/securityonion"
-    cfg.vm.hostname = "securityonion"
+    cfg.vm.hostname = "solab"
     cfg.vm.provision :shell, path: "scripts/securityonion-rename-interfaces.sh"
     cfg.vm.provision "reload"
     cfg.vm.provision :shell, path: "scripts/securityonion-setup.sh"
     cfg.vm.provision "reload"
-    cfg.vm.provision :shell, path: "scripts/securityonion-standalone-install.sh"
+    cfg.vm.provision :shell, path: "scripts/securityonion-install.sh"
     cfg.vm.network "forwarded_port", guest: 443, host: 8843, auto_correct: true
 
     cfg.vm.provider "vmware_desktop" do |v, override|
@@ -75,7 +75,7 @@ Vagrant.configure("2") do |config|
     end
   end
 
-  config.vm.define "dc" do |cfg|
+  config.vm.define "lab-dc" do |cfg|
     cfg.vm.box = "detectionlab/win2016"
     cfg.vm.hostname = "dc"
     cfg.vbguest.auto_update = false
@@ -137,7 +137,7 @@ Vagrant.configure("2") do |config|
     end
   end
 
-  config.vm.define "wef" do |cfg|
+  config.vm.define "lab-wef" do |cfg|
     cfg.vm.box = "detectionlab/win2016"
     cfg.vm.hostname = "wef"
     cfg.vm.boot_timeout = 600
@@ -195,7 +195,7 @@ Vagrant.configure("2") do |config|
     end
   end
 
-  config.vm.define "win10" do |cfg|
+  config.vm.define "lab-win10" do |cfg|
     cfg.vm.box = "detectionlab/win10"
     cfg.vm.hostname = "win10"
     cfg.vm.boot_timeout = 1200
