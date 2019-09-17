@@ -467,6 +467,23 @@ build_vagrant_hosts() {
           exit 1
         fi
       fi
+    elif [ "$VAGRANT_ACTION" == "destroy" ]; then
+      RET=$(vagrant_destroy_host "$VAGRANT_HOST")
+      if [ "$RET" -eq 0 ]; then
+        (echo >&2 "Good news! $VAGRANT_HOST was destroyed successfully!")
+      fi
+      # Attempt to recover if the intial "vagrant up" fails
+      if [ "$RET" -ne 0 ]; then
+        (echo >&2 "Something went wrong while attempting to destroy the $VAGRANT_HOST box.")
+        (echo >&2 "Attempting to destroy the host again...")
+        RETRY_STATUS=$(vagrant_destroy_host "$VAGRANT_HOST")
+        if [ "$RETRY_STATUS" -eq 0 ]; then
+          (echo >&2 "Good news! $VAGRANT_HOST was destroyed successfully!")
+        else
+          (echo >&2 "Failed to destroy $VAGRANT_HOST after second attempt. Exiting.")
+          exit 1
+        fi
+      fi
     fi
   done
 }
