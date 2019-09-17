@@ -208,6 +208,13 @@ function get_running_hosts {
   }
 }
 
+function get_snapshot_list {
+  $CurrentDir = Get-Location
+  Set-Location "$DL_DIR\Vagrant"
+  Write-Host '[snapshot_list] Checking snapshots'
+  $script:SNAPSHOT_LIST = ((vagrant snapshot list) | Get-Unique)
+}
+
 function preflight_checks {
   Write-Host '[preflight_checks] Running..'
   # Check to see that no boxes exist
@@ -447,7 +454,10 @@ function post_build_checks {
 
 function main {
   param(
-    [string]$VagrantAction
+    [Parameter(Position=0)]
+    [string]$VagrantAction,
+    [Parameter(Position=1)]
+    [string]$SnapshotAction
   )
 
   get_lab_hosts
@@ -524,6 +534,37 @@ function main {
       Write-Host "[main] Finished for: $VAGRANT_HOST"
     }
   }
+  elseif ($VagrantAction -eq 'snapshot') {
+    Write-Host "[main] Checking current environment for snapshots"
+    get_snapshot_list
+    if ($SnapshotAction -eq 'list') {
+      if ( $script:SNAPSHOT_LIST | Select-String -Pattern "No snapshots have been taken yet" ) {
+      Write-Error "No snapshots have been taken in current environment"
+      #Write-Host $script:SNAPSHOT_LIST
+      break
+      }
+    }
+    break
+    forEach ($VAGRANT_HOST in $LAB_HOSTS) {
+      Write-Host "[main] Running vagrant_halt_host for: $VAGRANT_HOST"
+      $result = vagrant_halt_host -VagrantHost $VAGRANT_HOST
+      Write-Host "[main] vagrant_halt_host finished. Exitcode: $result"
+      if ($result -eq '0') {
+        Write-Output "Good news! $VAGRANT_HOST was stopped successfully!"
+      }
+      else {
+        Write-Warning "Something went wrong while attempting to stop the $VAGRANT_HOST box."
+        Write-Output "Attempting to stop the host again..."
+        Write-Host "[main] Running vagrant_halt_host for: $VAGRANT_HOST"
+        $retryResult = vagrant_halt_host -VagrantHost $VAGRANT_HOST
+        if ($retryResult -ne 0) {
+          Write-Error "Failed to stop $VAGRANT_HOST after second attempt. Exiting"
+          break
+        }
+      }
+      Write-Host "[main] Finished for: $VAGRANT_HOST"
+    }
+  }
   elseif ($VagrantAction -eq 'destroy') {
     Write-Host "[main] Checking current environment for any hosts"
     get_lab_hosts
@@ -554,6 +595,52 @@ function main {
     #Write-Host "[main] Finished post_build_checks"
 }
 
+function SnapshotMenu{
+  Clear-Host
+  Do
+  {
+    Write-Host -Object '*******************************'
+    Write-Host -Object "Security Onion Snapshot Options" -ForegroundColor Blue
+    Write-Host -Object '*******************************'
+    Write-Host -Object ''
+    Write-Host -Object '0.  List Snapshots      - List snapshots within current environment'
+    Write-Host -Object ''
+    Write-Host -Object '1.  Take A Snapshot     - Take a snapshot of the current environment'
+    Write-Host -Object ''
+    Write-Host -Object 'M.  Menu'
+    Write-Host -Object ''
+    Write-Host -Object 'Q.  Quit'
+    $Snapshot = Read-Host -Prompt '(0-1, M to Main Menu, or Q to Quit)'
+
+    switch($Snapshot) {
+      0
+      {
+        $VagrantOnly = $true
+        main 'snapshot' 'list'
+        Set-Location "$DL_DIR"
+        Exit
+      }
+      1
+      {
+        $VagrantOnly = $true
+        Set-Location "$DL_DIR"
+        Exit
+      }
+      M
+      {
+        Menu
+        Exit
+      }
+      Q
+      {
+        cd $DL_DIR
+        Exit
+      }
+    }
+  }  
+  until ($Snapshot -eq 'q')
+}
+
 function HaltMenu{
   Clear-Host
   Do
@@ -562,9 +649,9 @@ function HaltMenu{
     Write-Host -Object "Security Onion Halt Options" -ForegroundColor Blue
     Write-Host -Object '***************************'
     Write-Host -Object ''
-    Write-Host -Object '0.  Halt Current Boxes  - Shutdown currently running machines'
+    Write-Host -Object '0.  Halt Current Env  - Destroy all machines in current environment'
     Write-Host -Object ''
-    Write-Host -Object '1.  Halt All Boxes      - Shutdown running machines in all environments'
+    Write-Host -Object '1.  Halt All Envs     - Destroy machines in all environments'
     Write-Host -Object ''
     Write-Host -Object 'M.  Menu'
     Write-Host -Object ''
@@ -599,12 +686,14 @@ function HaltMenu{
       }
       M
       {
+        Clear-Host
         Menu
         Exit
       }
       Q
       {
         cd $DL_DIR
+        Clear-Host
         Exit
       }
     }
@@ -616,9 +705,9 @@ function DestroyMenu{
   Clear-Host
   Do
   {
-    Write-Host -Object '***************************'
-    Write-Host -Object "Security Onion Halt Options" -ForegroundColor Blue
-    Write-Host -Object '***************************'
+    Write-Host -Object '******************************'
+    Write-Host -Object "Security Onion Destroy Options" -ForegroundColor Blue
+    Write-Host -Object '******************************'
     Write-Host -Object ''
     Write-Host -Object '0.  Destroy Current Env  - Destroy all machines in current environment'
     Write-Host -Object ''
@@ -751,6 +840,10 @@ function Menu {
       6
       {
         HaltMenu
+      }
+      7
+      {
+        SnapshotMenu
       }
       99
       {
