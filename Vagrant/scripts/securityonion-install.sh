@@ -1,12 +1,16 @@
 #! /bin/bash
 
 setup_test_repo() {
-  # Add testing repo for newer packages/containers
-  echo "Adding test repository if enabled"
-  echo 'yes' | add-apt-repository -y ppa:securityonion/test
+  if [ -f /etc/apt/sources.list.d/securityonion-ubuntu-test-xenial.list ]; then
+    echo "Test repository already added... Skipping"
+  else
+    # Add testing repo for newer packages/containers
+    echo "Adding test repository if enabled"
+    echo 'yes' | add-apt-repository -y ppa:securityonion/test
 
-  # Update if you'd like
-  sudo /usr/sbin/soup -y
+    # Update if you'd like
+    sudo /usr/sbin/soup -y
+  fi
 }
 
 enable_features() {
