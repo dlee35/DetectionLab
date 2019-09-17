@@ -180,6 +180,18 @@ check_vagrant_reload_plugin() {
   fi
 }
 
+check_vagrant_vbguest_plugin() {
+  # Ensure the vagrant-vbguest plugin is installed
+  VAGRANT_VBGUEST_PLUGIN_INSTALLED=$(vagrant plugin list | grep -c 'vagrant-vbguest')
+  if [ "$VAGRANT_VBGUEST_PLUGIN_INSTALLED" != "1" ]; then
+    (echo >&2 "The vagrant-vbguest plugin is required and not currently installed. This script will attempt to install it now.")
+    if ! $(which vagrant) plugin install "vagrant-vbguest"; then
+      (echo >&2 "Unable to install the vagrant-vbguest plugin. Please try to do so manually and re-run this script.")
+      exit 1
+    fi
+  fi
+}
+
 # Check available disk space. Recommend 80GB free, warn if less.
 check_disk_free_space() {
   FREE_DISK_SPACE=$(df -m "$HOME" | tr -s ' ' | grep '/' | cut -d ' ' -f 4)
@@ -219,6 +231,7 @@ preflight_checks() {
     check_vagrant_path
     check_vagrant_instances_exist
     check_vagrant_reload_plugin
+    check_vagrant_vbguest_plugin
   fi
 
   check_boxes_built
