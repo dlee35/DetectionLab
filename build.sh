@@ -295,7 +295,7 @@ vagrant_destroy_host() {
   HOST="$1"
   cd "$DL_DIR"/Vagrant || exit 1
   # Attempt to delete the host
-  $(which vagrant) destroy "$HOST" >>"$DL_DIR/Vagrant/logs/vagrant_destroy_$HOST.log" 2>&1
+  $(which vagrant) destroy -f "$HOST" >>"$DL_DIR/Vagrant/logs/vagrant_destroy_$HOST.log" 2>&1
   echo "$?"
 }
 
