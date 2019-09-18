@@ -16,7 +16,6 @@ $subnet = $ip -replace "\.\d+$", ""
 $OSVersion = (get-itemproperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion" -Name ProductName).ProductName
 
 if ($OSVersion -eq "Windows 7 Enterprise") {
-  #get-wmiobject Win32_NetworkAdapterConfiguration |? {$_.ipaddress -contains $addr} | % {$_.GetRelated("win32_NetworkAdapter")} | select NetConnectionID |%{$_.NetConnectionID}
   $name = (Get-WmiObject win32_NetworkAdapterConfiguration `
     | ? {$_.ipaddress -like "$subnet.*"} `
     | % {$_.GetRelated("win32_NetworkAdapter")} `
@@ -29,6 +28,9 @@ if ($OSVersion -eq "Windows 7 Enterprise") {
       | select NetConnectionID |%{$_.NetConnectionID})
   }
 } else {
+  $address = (Get-NetIPAddress -AddressFamily IPv4 `
+     | Where-Object -FilterScript { ($_.IPAddress).StartsWith($subnet) } `
+     ).IPAddress
   $name = (Get-NetIPAddress -AddressFamily IPv4 `
      | Where-Object -FilterScript { ($_.IPAddress).StartsWith($subnet) } `
      ).InterfaceAlias
@@ -39,14 +41,19 @@ if ($OSVersion -eq "Windows 7 Enterprise") {
   }
 }
 
-if ($name) {
-  Write-Host "Set IP address to $ip, gateway to $subnet.222, and metric of 2 for interface $name"
-  & netsh.exe int ip set address "$name" static $ip 255.255.255.0 "$subnet.222"
-  & netsh.exe int ip set interface "$name" metric=1
-  if ($dns) {
-    Write-Host "Set DNS server address to $dns of interface $name"
-    & netsh.exe interface ipv4 add dnsserver "$name" address=$dns index=1
+if ($ip -ne $address) {
+  if ($name) {
+    Write-Host "Set IP address to $ip, gateway to $subnet.222, and metric of 2 for interface $name"
+    & netsh.exe int ip set address "$name" static $ip 255.255.255.0 "$subnet.222"
+    & netsh.exe int ip set interface "$name" metric=1
+  } else {
+    Write-Error "Could not find a interface with subnet $subnet.xx"
   }
 } else {
-  Write-Error "Could not find a interface with subnet $subnet.xx"
+  Write-Host "IP Address set correctly. Change unnecessary."
+}
+
+if ($name -and $dns) {
+  Write-Host "Set DNS server address to $dns of interface $name"
+  & netsh.exe interface ipv4 add dnsserver "$name" address=$dns index=1
 }
