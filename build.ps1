@@ -603,24 +603,24 @@ function SnapshotMenu{
     Write-Host -Object "Security Onion Snapshot Options" -ForegroundColor Blue
     Write-Host -Object '*******************************'
     Write-Host -Object ''
-    Write-Host -Object '0.  List Snapshots      - List snapshots within current environment'
+    Write-Host -Object '1.  List Snapshots      - List snapshots within current environment'
     Write-Host -Object ''
-    Write-Host -Object '1.  Take A Snapshot     - Take a snapshot of the current environment'
+    Write-Host -Object '2.  Take A Snapshot     - Take a snapshot of the current environment'
     Write-Host -Object ''
     Write-Host -Object 'M.  Menu'
     Write-Host -Object ''
     Write-Host -Object 'Q.  Quit'
-    $Snapshot = Read-Host -Prompt '(0-1, M to Main Menu, or Q to Quit)'
+    $Snapshot = Read-Host -Prompt '(1-2, M to Main Menu, or Q to Quit)'
 
     switch($Snapshot) {
-      0
+      1
       {
         $VagrantOnly = $true
         main 'snapshot' 'list'
         Set-Location "$DL_DIR"
         Exit
       }
-      1
+      2
       {
         $VagrantOnly = $true
         Set-Location "$DL_DIR"
@@ -649,17 +649,17 @@ function HaltMenu{
     Write-Host -Object "Security Onion Halt Options" -ForegroundColor Blue
     Write-Host -Object '***************************'
     Write-Host -Object ''
-    Write-Host -Object '0.  Halt Current Env  - Destroy all machines in current environment'
+    Write-Host -Object '1.  Halt Current Env  - Destroy all machines in current environment'
     Write-Host -Object ''
-    Write-Host -Object '1.  Halt All Envs     - Destroy machines in all environments'
+    Write-Host -Object '2.  Halt All Envs     - Destroy machines in all environments'
     Write-Host -Object ''
     Write-Host -Object 'M.  Menu'
     Write-Host -Object ''
     Write-Host -Object 'Q.  Quit'
-    $HaltMenu = Read-Host -Prompt '(0-1, M to Main Menu, or Q to Quit)'
+    $HaltMenu = Read-Host -Prompt '(1-2, M to Main Menu, or Q to Quit)'
 
     switch($HaltMenu) {
-      0
+      1
       {
         $VagrantOnly = $true
         main 'halt'
@@ -667,7 +667,7 @@ function HaltMenu{
         Set-Location "$DL_DIR"
         Exit
       }
-      1
+      2
       {
         $VagrantOnly = $true
         Copy-Item $DL_DIR\Vagrant\Vagrantfile_Minimal $DL_DIR\Vagrant\Vagrantfile
@@ -709,17 +709,17 @@ function DestroyMenu{
     Write-Host -Object "Security Onion Destroy Options" -ForegroundColor Blue
     Write-Host -Object '******************************'
     Write-Host -Object ''
-    Write-Host -Object '0.  Destroy Current Env  - Destroy all machines in current environment'
+    Write-Host -Object '1.  Destroy Current Env  - Destroy all machines in current environment'
     Write-Host -Object ''
-    Write-Host -Object '1.  Destroy All Envs     - Destroy machines in all environments'
+    Write-Host -Object '2.  Destroy All Envs     - Destroy machines in all environments'
     Write-Host -Object ''
     Write-Host -Object 'M.  Menu'
     Write-Host -Object ''
     Write-Host -Object 'Q.  Quit'
-    $DestroyMenu = Read-Host -Prompt '(0-1, M to Main Menu, or Q to Quit)'
+    $DestroyMenu = Read-Host -Prompt '(1-2, M to Main Menu, or Q to Quit)'
 
     switch($DestroyMenu) {
-      0
+      1
       {
         $VagrantOnly = $true
         main 'destroy'
@@ -727,7 +727,7 @@ function DestroyMenu{
         Set-Location "$DL_DIR"
         Exit
       }
-      1
+      2
       {
         $VagrantOnly = $true
         Copy-Item $DL_DIR\Vagrant\Vagrantfile_Minimal $DL_DIR\Vagrant\Vagrantfile
@@ -782,7 +782,7 @@ function Menu {
     Write-Host -Object ''
     Write-Host -Object '3.  Distributed Demo    - Analyst, Master, Heavy, Forward, pfSense, Apt-Cacher NG, Web, DC'
     Write-Host -Object ''
-    Write-Host -Object '4.  Windows Lab         - Security Onion (Standalone), pfSense, DC, WEF, Win10'
+    Write-Host -Object '4.  Windows Lab         - Security Onion (Standalone), pfSense, RTO, DC, WEF, Win10'
     Write-Host -Object ''
     Write-Host -Object '5.  All Machines        - The whole enchilada! Please have at least 64GB of RAM to attempt'
     Write-Host -Object ''
@@ -875,9 +875,10 @@ function Menu {
         Write-Host -Object '                          Learn how a distributed Security Onion installation works'
         Write-Host -Object '                          Integrate any endpoint solution for testing'
         Write-Host -Object ''
-        Write-Host -Object '4.  Windows Lab         - Security Onion (Standalone), pfSense, DC, WEF, Win10'
+        Write-Host -Object '4.  Windows Lab         - Security Onion (Standalone), pfSense, RTO, DC, WEF, Win10'
         Write-Host -Object '                          172.16.163.0/24 network'
         Write-Host -Object '                          Security Onion setup complete w/Elastic Features enabled'
+        Write-Host -Object '                          Red Team Operator machine using Redcloud and educational ransomware'
         Write-Host -Object '                          Sysmon, Autoruns, Atomic Red Team, Mimikatz installed on Windows'
         Write-Host -Object '                          All Windows logs forwarded to WEF box via GPO'
         Write-Host -Object '                          WEF forwards all logs to Security Onion via Winlogbeat'
