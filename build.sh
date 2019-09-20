@@ -610,7 +610,7 @@ helpmenu() {
   helpmessage="1.  Minimal Install     - Single Security Onion Instance (Standalone)$helpspace NAT network$helpspace 2 interfaces: mgmt0 & promisc0$helpspace Setup to use minimal hardware: 2 CPU & 4GB RAM$helpspace Self installing. Ready to go after the initial build!$helpspace WARNING: Suricata NIDS and Bro/Zeek logs ONLY!\n\n"
   helpmessage+="2.  Standard Install    - Single Security Onion Instance (Standalone)$helpspace NAT network$helpspace 2 interfaces: mgmt0 & promisc0$helpspace Setup to use basic requirements for eval: 4 CPU & 8GB RAM$helpspace Self installing. Ready to go after the initial build!$helpspace Full Elastic pipeline and standard integrations\n\n"
   helpmessage+="3.  Distributed Demo    - Analyst, Master, Heavy, Forward, pfSense, Apt-Cacher NG, Web, DC$helpspace 172.16.163.0/24 network$helpspace Vanilla installation without any setup$helpspace Learn how a distributed Security Onion installation works$helpspace Integrate any endpoint solution for testing\n\n"
-  helpmessage+="4.  Windows Lab         - Security Onion (Standalone), pfSense, DC, WEF, Win10$helpspace 172.16.163.0/24 network$helpspace Security Onion setup complete w/Elastic Features enabled$helpspace Sysmon, Autoruns, Atomic Red Team, Mimikatz installed on Windows$helpspace All Windows logs forwarded to WEF box via GPO$helpspace WEF forwards all logs to Security Onion via Winlogbeat\n\n"
+  helpmessage+="4.  Windows Lab         - Security Onion (Standalone), pfSense, RTO, DC, WEF, Win10$helpspace 172.16.163.0/24 network$helpspace Security Onion setup complete w/Elastic Features enabled$helpspace Red Team Operator machine using Redcloud and educational ransomware,$helpspace Sysmon, Autoruns, Atomic Red Team, Mimikatz installed on Windows$helpspace All Windows logs forwarded to WEF box via GPO$helpspace WEF forwards all logs to Security Onion via Winlogbeat\n\n"
   helpmessage+="5.  All Machines        - The whole enchilada! Please have at least 64GB of RAM to attempt$helpspace 172.16.163.0/24 network$helpspace Analyst, Master, Heavy, Forward, pfSense,$helpspace Apt-Cacher NG, Web, DC, WEF, Win10$helpspace Mimic an entire network with a single \`vagrant up\`$helpspace IF YOU HAVE THE RESOURCES! NOT FOR THE FAINT OF HEART!"
   whiptail --msgbox --title "Security Onion Help" "$helpmessage" 39 100 9 3>&2 2>&1 1>&3	
   menu
@@ -628,7 +628,7 @@ menu() {
   	"1." "Minimal Install     - Single Security Onion Instance (Standalone)"   \
   	"2." "Standard Install    - Single Security Onion Instance (Standalone)"  \
   	"3." "Distributed Demo    - Analyst, Master, Heavy, Forward, pfSense, Apt-Cacher NG, Web, DC" \
-  	"4." "Windows Lab         - Security Onion (Standalone), pfSense, DC, WEF, Win10" \
+  	"4." "Windows Lab         - Security Onion (Standalone), pfSense, RTO, DC, WEF, Win10" \
   	"5." "All Machines        - The whole enchilada! Please have at least 64GB of RAM to attempt" \
   	"6." "Halt Options" \
   	"99." "Destroy Options" \
