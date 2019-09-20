@@ -26,25 +26,29 @@ apt_install_prerequisites() {
     unzip latest.zip
     cp -av securityonion-latest/* /var/www/html/
   fi
-  if [[ "$HOST" == *"malware" ]]; then
+  if [[ "$HOST" == *"rto" ]]; then
     apt-get install -y ca-certificates curl software-properties-common git
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
     add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
     apt-get update
-    apt-get install -y docker-ce
+    apt-get install -y docker-ce python3-pip
     usermod -aG docker vagrant
+    curl -L "https://github.com/docker/compose/releases/download/1.22.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    chmod +x /usr/local/bin/docker-compose
     curl -sL https://deb.nodesource.com/setup_10.x -o nodesource_setup.sh
     bash nodesource_setup.sh
     apt-get install -y nodejs
     npm install ngrok && cp ~/node_modules/ngrok/bin/ngrok /usr/sbin/
     wget https://raw.githubusercontent.com/tedsluis/tmux.conf/master/.tmux.conf -O /home/vagrant/.tmux.conf
-    git clone https://github.com/mauri870/ransomware.git /opt/ransomware
-    chown -R vagrant.vagrant /opt/ransomware /home/vagrant/.tmux.conf
-    if [ -f /vagrant/resources/securityonion/daemon.json ]; then
-      mkdir /etc/docker
-      cp /vagrant/resources/securityonion/daemon.json /etc/docker/daemon.json
-    fi
-    systemctl restart docker
+    systemctl enable docker && systemctl start docker
+    git clone https://github.com/mauri870/ransomware /opt/ransomware
+    git clone https://github.com/khast3x/redcloud /opt/redcloud
+    chown -R vagrant.vagrant /opt/ransomware /opt/redcloud /home/vagrant/.tmux.conf
+    cd /opt/redcloud && pip3 install -r requirements.txt
+    # Second echo for exit status 0
+    echo '1' | python3 redcloud.py; echo "Success!"
+    # There seems to be an issue w/cert-gen (or something). Hoping re-instantiating the containers corrects it.
+    /usr/local/bin/docker-compose up -d
   fi
 }
 
@@ -66,11 +70,11 @@ fix_eth1_static_ip() {
     echo "" >> /etc/network/interfaces
     echo "auto eth1" >> /etc/network/interfaces
     echo "iface eth1 inet static" >> /etc/network/interfaces
-    if [ "$HOST" == "web" ]; then
+    if [[ "$HOST" == *"web" ]]; then
       echo "  address 172.16.163.221" >> /etc/network/interfaces
-    elif [ "$HOST" == "acng" ]; then
+    elif [[ "$HOST" == *"acng" ]]; then
       echo "  address 172.16.163.223" >> /etc/network/interfaces
-    elif [ "$HOST" == "malware" ]; then
+    elif [[ "$HOST" == *"rto" ]]; then
       echo "  address 172.16.163.224" >> /etc/network/interfaces
     fi
     echo "  netmask 255.255.255.0" >> /etc/network/interfaces
