@@ -15,15 +15,16 @@ fix_vagrant_ip() {
   if grep -q 'Security Onion setup' /etc/network/interfaces; then
     echo "Interfaces already configured... Skipping"
   else
-    ETH_DHCP=$(ip link | grep -E 'vagrant0' | cut -f 2 -d\: | tr -d [:space:])
+    ETH_DHCP=$(ip link | grep -E 'vagrant0|mgmt0' | cut -f 2 -d\: | tr -d [:space:])
     DHCP_IP=$(ifconfig $ETH_DHCP | grep 'inet addr' | cut -d ':' -f 2 | cut -d ' ' -f 1)
     if [ ! -z "$DHCP_IP" ]; then
       echo "Adding vagrant host address to Wazuh whitelist"
       VAGRANT_HOST=$(echo $DHCP_IP | awk -F. '{ print $1"."$2"."$3".2" }')
       /usr/sbin/so-ossec-stop
       sed -i  "/<white_list>127.0.0.1<\/white_list>/a \ \ \ \ <white_list>$VAGRANT_HOST<\/white_list>" /var/ossec/etc/ossec.conf
-      #echo "Restarting the Wazuh server"
-      #/usr/sbin/so-ossec-start
+      ANALYST_HOST=$(echo $DHCP_IP | awk -F. '{ print $1"."$2"."$3".1" }')
+      sed -i  "/<white_list>127.0.0.1<\/white_list>/a \ \ \ \ <white_list>$ANALYST_HOST<\/white_list>" /var/ossec/etc/ossec.conf
+      ufw allow proto tcp from $ANALYST_HOST to any port 22,443,7734
     fi
     if [ -z "$DHCP_IP" ]; then
       echo "Incorrect IP Address settings detected... Attempting to update"
