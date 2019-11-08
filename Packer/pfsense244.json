@@ -3,17 +3,17 @@
       {
       "type": "vmware-iso",
         "boot_command": [
-            "<enter><wait5>",
-            "<enter><wait5>",
-            "<enter><wait5>",
-            "<enter><wait5>",
-            "<enter><wait30>",
-            "<enter><wait5>",
-            "<enter><wait5>",
+            "<enter><wait10>",
+            "<enter><wait10>",
+            "<enter><wait10>",
+            "<enter><wait10>",
             "<enter><wait1m>",
-            "14<enter><wait5>",
-            "y<enter><wait5>",
-            "8<enter><wait5>",
+            "<enter><wait10>",
+            "<enter><wait10>",
+            "<enter><wait2m>",
+            "14<enter><wait10>",
+            "y<enter><wait10>",
+            "8<enter><wait10>",
             "pkg install -y bash<enter><wait5>",
             "pkg install -y sudo<enter><wait5>",
             "echo vagrant | pw user add vagrant -m -s /usr/local/bin/bash -b /home/ -G wheel -h 0<enter><wait>",
@@ -31,7 +31,7 @@
             "pfctl -d<enter><wait>",
             "exit<enter>"
         ],
-      "boot_wait": "45s",
+      "boot_wait": "1m30s",
       "vm_name": "packer-pfsense-2.4.4-amd64",
       "iso_urls": [
           "isos/pfSense-CE-2.4.4-RELEASE-amd64.iso"
@@ -51,19 +51,24 @@
       "disk_size": "{{user `disk_size`}}",
       "vnc_port_min": 5900,
       "vnc_port_max": 5980,
-      "version": 11,
+      "vnc_disable_password": true,
+      "remote_type": "esx5",
+      "remote_host": "{{user `esxi_host`}}",
+      "remote_datastore": "{{user `esxi_datastore`}}",
+      "remote_username": "{{user `esxi_username`}}",
+      "remote_password": "{{user `esxi_password`}}",
+      "keep_registered": true,
       "vmx_data": {
         "RemoteDisplay.vnc.enabled": "false",
         "RemoteDisplay.vnc.port": "5900",
         "memsize": "512",
         "numvcpus": "1",
         "scsi0.virtualDev": "lsisas1068",
-        "ethernet0.pciSlotNumber": "32",
-        "ethernet1.present": true,
-        "ethernet1.pciSlotNumber": "33",
         "ethernet1.virtualDev": "e1000",
-        "ethernet1.connectionType": "custom",
-        "ethernet1.vnet": "VMnet7"
+        "ethernet0.networkName": "VM Network",
+        "ethernet1.present": true,
+        "ethernet1.virtualDev": "e1000",
+        "ethernet1.networkName": "Internal Network"
       }
     },
     {
@@ -142,6 +147,10 @@
     "disk_size": "20000",
     "ssh_username": "vagrant",
     "ssh_password": "vagrant",
-    "http_directory": "./scripts"
+    "http_directory": "./scripts",
+    "esxi_host": "192.168.202.140",
+    "esxi_datastore": "datastore1",
+    "esxi_username": "root",
+    "esxi_password": "r00tr00t123#"
     }
 }
