@@ -119,7 +119,7 @@ list_providers() {
   if [[ $VMWARE_WORKSTATION_PRESENT -eq 1 ]] && [[ $VAGRANT_VMWARE_DESKTOP_PLUGIN_PRESENT -eq 1 ]]; then
     (echo >&2 "vmware_desktop")
   fi
-  if [[ $VBOX_PRESENT -eq 0 ]] && [[ $VMWARE_FUSION_PRESENT -eq 0 ]] && [[ $VMWARE_WORKSTATION_PRESENT -eq 0 ]]; then
+  if [[ $VBOX_PRESENT -eq 0 ]] && [[ $VMWARE_FUSION_PRESENT -eq 0 ]] && [[ $VMWARE_WORKSTATION -eq 0 ]]; then
     (echo >&2 "You need to install a provider such as VirtualBox or VMware Fusion to continue.")
     exit 1
   fi
@@ -133,22 +133,13 @@ list_providers() {
   echo "$PROVIDER"
 }
 
-get_lab_hosts() {
-  LAB_HOSTS=($(grep '^ \{1,\}config.vm.define' $DL_DIR/Vagrant/Vagrantfile | cut -f2 -d\"))
-}
-
-get_running_hosts() {
-  cd "$DL_DIR"/Vagrant/ || exit 1
-  LAB_HOSTS=$(vagrant status | grep '  running' | cut -f1 -d\ )
-}
-
 # Check to see if boxes exist in the "Boxes" directory already
 check_boxes_built() {
   BOXES_BUILT=$(find "$DL_DIR"/Boxes -name "*.box" | wc -l)
   if [ "$BOXES_BUILT" -gt 0 ]; then
-    if [[ "$VAGRANT_ONLY" -eq 1 && "$VAGRANT_ACTION" == "up" ]]; then
+    if [ "$VAGRANT_ONLY" -eq 1 ]; then
       (echo >&2 "WARNING: You seem to have at least one .box file present in $DL_DIR/Boxes already. If you would like fresh boxes downloaded, please remove all files from the Boxes directory and re-run this script.")
-    elif [ "$VAGRANT_ONLY" -eq 0 ]; then
+    else
       (echo >&2 "You seem to have at least one .box file in $DL_DIR/Boxes. This script does not support pre-built boxes. Please either delete the existing boxes or follow the build steps in the README to continue.")
       exit 1
     fi
@@ -159,10 +150,8 @@ check_boxes_built() {
 check_vagrant_instances_exist() {
   cd "$DL_DIR"/Vagrant/ || exit 1
   # Vagrant status has the potential to return a non-zero error code, so we work around it with "|| true"
-  VAGRANT_BUILT=$(vagrant status | grep -Ec 'created \(|running \(|poweroff \(') || true
-  if [[ "$VAGRANT_BUILT" -ne "${#LAB_HOSTS[@]}" ]]; then
-    echo $VAGRANT_BUILT
-    echo ${#LAB_HOSTS[@]}
+  VAGRANT_BUILT=$(vagrant status | grep -c 'not created') || true
+  if [ "$VAGRANT_BUILT" -ne 4 ]; then
     (echo >&2 "You appear to have already created at least one Vagrant instance. This script does not support pre-created instances. Please either destroy the existing instances or follow the build steps in the README to continue.")
     exit 1
   fi
@@ -175,18 +164,6 @@ check_vagrant_reload_plugin() {
     (echo >&2 "The vagrant-reload plugin is required and not currently installed. This script will attempt to install it now.")
     if ! $(which vagrant) plugin install "vagrant-reload"; then
       (echo >&2 "Unable to install the vagrant-reload plugin. Please try to do so manually and re-run this script.")
-      exit 1
-    fi
-  fi
-}
-
-check_vagrant_vbguest_plugin() {
-  # Ensure the vagrant-vbguest plugin is installed
-  VAGRANT_VBGUEST_PLUGIN_INSTALLED=$(vagrant plugin list | grep -c 'vagrant-vbguest')
-  if [ "$VAGRANT_VBGUEST_PLUGIN_INSTALLED" != "1" ]; then
-    (echo >&2 "The vagrant-vbguest plugin is required and not currently installed. This script will attempt to install it now.")
-    if ! $(which vagrant) plugin install "vagrant-vbguest"; then
-      (echo >&2 "Unable to install the vagrant-vbguest plugin. Please try to do so manually and re-run this script.")
       exit 1
     fi
   fi
@@ -231,7 +208,6 @@ preflight_checks() {
     check_vagrant_path
     check_vagrant_instances_exist
     check_vagrant_reload_plugin
-    check_vagrant_vbguest_plugin
   fi
 
   check_boxes_built
@@ -268,7 +244,7 @@ vagrant_up_host() {
   HOST="$1"
   (echo >&2 "Attempting to bring up the $HOST host using Vagrant")
   cd "$DL_DIR"/Vagrant || exit 1
-  $(which vagrant) up "$HOST" --provider="$PROVIDER" &> "$DL_DIR/Vagrant/logs/vagrant_up_$HOST.log"
+  $(which vagrant) up "$HOST" --provider="$PROVIDER" &> "$DL_DIR/Vagrant/vagrant_up_$HOST.log"
   echo "$?"
 }
 
@@ -277,25 +253,7 @@ vagrant_reload_host() {
   HOST="$1"
   cd "$DL_DIR"/Vagrant || exit 1
   # Attempt to reload the host if the vagrant up command didn't exit cleanly
-  $(which vagrant) reload "$HOST" --provision >>"$DL_DIR/Vagrant/logs/vagrant_up_$HOST.log" 2>&1
-  echo "$?"
-}
-
-# Attempts to shutdown a host
-vagrant_halt_host() {
-  HOST="$1"
-  cd "$DL_DIR"/Vagrant || exit 1
-  # Attempt to shutdown the host
-  $(which vagrant) halt "$HOST" >>"$DL_DIR/Vagrant/logs/vagrant_halt_$HOST.log" 2>&1
-  echo "$?"
-}
-
-# Attempts to delete a host
-vagrant_destroy_host() {
-  HOST="$1"
-  cd "$DL_DIR"/Vagrant || exit 1
-  # Attempt to delete the host
-  $(which vagrant) destroy -f "$HOST" >>"$DL_DIR/Vagrant/logs/vagrant_destroy_$HOST.log" 2>&1
+  $(which vagrant) reload "$HOST" --provision >>"$DL_DIR/Vagrant/vagrant_up_$HOST.log" 2>&1
   echo "$?"
 }
 
@@ -303,12 +261,12 @@ vagrant_destroy_host() {
 post_build_checks() {
   # If the curl operation fails, we'll just leave the variable equal to 0
   # This is needed to prevent the script from exiting if the curl operation fails
-  #SPLUNK_CHECK=$(curl -ks -m 2 https://172.16.163.105:8000/en-US/account/login?return_to=%2Fen-US%2F | grep -c 'This browser is not supported by Splunk' || echo "")
-  #FLEET_CHECK=$(curl -ks -m 2 https://172.16.163.105:8412 | grep -c 'Kolide Fleet' || echo "")
-  #ATA_CHECK=$(curl --fail --write-out "%{http_code}" -ks https://172.16.163.103 -m 2)
+  SPLUNK_CHECK=$(curl -ks -m 2 https://192.168.38.105:8000/en-US/account/login?return_to=%2Fen-US%2F | grep -c 'This browser is not supported by Splunk' || echo "")
+  FLEET_CHECK=$(curl -ks -m 2 https://192.168.38.105:8412 | grep -c 'Kolide Fleet' || echo "")
+  ATA_CHECK=$(curl --fail --write-out "%{http_code}" -ks https://192.168.38.103 -m 2)
   [[ $ATA_CHECK == 401 ]] && ATA_CHECK=1
 
-  BASH_MAJOR_VERSION=$(/bin/bash --version | grep 'GNU bash' | grep -o version\.\.. | cut -d ' ' -f 2 | cut -d '.' -f 1)
+  BASH_MAJOR_VERSION=$(/bin/bash --version | grep 'GNU bash' | grep -oi version\.\.. | cut -d ' ' -f 2 | cut -d '.' -f 1)
   # Associative arrays are only supported in bash 4 and up
   if [ "$BASH_MAJOR_VERSION" -ge 4 ]; then
     declare -A SERVICES
@@ -333,11 +291,11 @@ post_build_checks() {
 
 parse_cli_arguments() {
   # If no argument was supplied, list available providers
-  if [[ "$#" -le 1 && "$1" == "up" ]]; then
+  if [ "$#" -eq 0 ]; then
     PROVIDER=$(list_providers)
   fi
   # If more than two arguments were supplied, print usage message
-  if [ "$#" -gt 3 ]; then
+  if [ "$#" -gt 2 ]; then
     print_usage
     exit 1
   fi
@@ -345,40 +303,22 @@ parse_cli_arguments() {
     # If the user specifies the provider as an agument, set the variable
     # TODO: Check to make sure they actually have their provider installed
     case "$1" in
-      up)
-      VAGRANT_ACTION="up"
-      ;;
-      halt)
-      VAGRANT_ACTION="halt"
-      ;;
-      destroy)
-      VAGRANT_ACTION="destroy"
-      ;;
-      *)
-      echo "\"$1\" is not a valid vagrant command"
-      ;;
-    esac
-  fi
-  if [[ "$#" -ge 2 && "$1" == "up" ]]; then
-    # If the user specifies the provider as an agument, set the variable
-    # TODO: Check to make sure they actually have their provider installed
-    case "$2" in
       virtualbox)
-      PROVIDER="$2"
-      PACKER_PROVIDER="$2"
+      PROVIDER="$1"
+      PACKER_PROVIDER="$1"
       ;;
       vmware_desktop)
-      PROVIDER="$2"
+      PROVIDER="$1"
       PACKER_PROVIDER="vmware"
       ;;
       *)
-      echo "\"$2\" is not a valid provider. Listing available providers:"
+      echo "\"$1\" is not a valid provider. Listing available providers:"
       PROVIDER=$(list_providers)
       ;;
     esac
   fi
-  if [[ $# -eq 3 && "$1" == "up" ]]; then
-    case "$3" in
+  if [ $# -eq 2 ]; then
+    case "$2" in
       --packer-only)
       PACKER_ONLY=1
       ;;
@@ -386,7 +326,7 @@ parse_cli_arguments() {
       VAGRANT_ONLY=1
       ;;
       *)
-      echo -e "\"$3\" is not recognized as an option. Available options are:\\n--packer-only\\n--vagrant-only"
+      echo -e "\"$2\" is not recognized as an option. Available options are:\\n--packer-only\\n--vagrant-only"
       exit 1
       ;;
     esac
@@ -431,58 +371,24 @@ fi
 }
 
 build_vagrant_hosts() {
+  LAB_HOSTS=("logger" "dc" "wef" "win10")
+
   # Vagrant up each box and attempt to reload one time if it fails
   for VAGRANT_HOST in "${LAB_HOSTS[@]}"; do
-    if [ "$VAGRANT_ACTION" == "up" ]; then
-      RET=$(vagrant_up_host "$VAGRANT_HOST")
-      if [ "$RET" -eq 0 ]; then
-        (echo >&2 "Good news! $VAGRANT_HOST was built successfully!")
-      fi
-      # Attempt to recover if the intial "vagrant up" fails
-      if [ "$RET" -ne 0 ]; then
-        (echo >&2 "Something went wrong while attempting to build the $VAGRANT_HOST box.")
-        (echo >&2 "Attempting to reload and reprovision the host...")
-        RETRY_STATUS=$(vagrant_reload_host "$VAGRANT_HOST")
-        if [ "$RETRY_STATUS" -eq 0 ]; then
-          (echo >&2 "Good news! $VAGRANT_HOST was built successfully after a reload!")
-        else
-          (echo >&2 "Failed to bring up $VAGRANT_HOST after a reload. Exiting.")
-          exit 1
-        fi
-      fi
-    elif [ "$VAGRANT_ACTION" == "halt" ]; then
-      RET=$(vagrant_halt_host "$VAGRANT_HOST")
-      if [ "$RET" -eq 0 ]; then
-        (echo >&2 "Good news! $VAGRANT_HOST was stopped successfully!")
-      fi
-      # Attempt to recover if the intial "vagrant up" fails
-      if [ "$RET" -ne 0 ]; then
-        (echo >&2 "Something went wrong while attempting to stop the $VAGRANT_HOST box.")
-        (echo >&2 "Attempting to stop the host again...")
-        RETRY_STATUS=$(vagrant_halt_host "$VAGRANT_HOST")
-        if [ "$RETRY_STATUS" -eq 0 ]; then
-          (echo >&2 "Good news! $VAGRANT_HOST was stopped successfully!")
-        else
-          (echo >&2 "Failed to stop $VAGRANT_HOST after second attempt. Exiting.")
-          exit 1
-        fi
-      fi
-    elif [ "$VAGRANT_ACTION" == "destroy" ]; then
-      RET=$(vagrant_destroy_host "$VAGRANT_HOST")
-      if [ "$RET" -eq 0 ]; then
-        (echo >&2 "Good news! $VAGRANT_HOST was destroyed successfully!")
-      fi
-      # Attempt to recover if the intial "vagrant up" fails
-      if [ "$RET" -ne 0 ]; then
-        (echo >&2 "Something went wrong while attempting to destroy the $VAGRANT_HOST box.")
-        (echo >&2 "Attempting to destroy the host again...")
-        RETRY_STATUS=$(vagrant_destroy_host "$VAGRANT_HOST")
-        if [ "$RETRY_STATUS" -eq 0 ]; then
-          (echo >&2 "Good news! $VAGRANT_HOST was destroyed successfully!")
-        else
-          (echo >&2 "Failed to destroy $VAGRANT_HOST after second attempt. Exiting.")
-          exit 1
-        fi
+    RET=$(vagrant_up_host "$VAGRANT_HOST")
+    if [ "$RET" -eq 0 ]; then
+      (echo >&2 "Good news! $VAGRANT_HOST was built successfully!")
+    fi
+    # Attempt to recover if the intial "vagrant up" fails
+    if [ "$RET" -ne 0 ]; then
+      (echo >&2 "Something went wrong while attempting to build the $VAGRANT_HOST box.")
+      (echo >&2 "Attempting to reload and reprovision the host...")
+      RETRY_STATUS=$(vagrant_reload_host "$VAGRANT_HOST")
+      if [ "$RETRY_STATUS" -eq 0 ]; then
+        (echo >&2 "Good news! $VAGRANT_HOST was built successfully after a reload!")
+      else
+        (echo >&2 "Failed to bring up $VAGRANT_HOST after a reload. Exiting.")
+        exit 1
       fi
     fi
   done
@@ -491,8 +397,11 @@ build_vagrant_hosts() {
 main() {
   # Get location of build.sh
   # https://stackoverflow.com/questions/59895/getting-the-source-directory-of-a-bash-script-from-within
-  #parse_cli_arguments "$@"
-  get_lab_hosts
+  DL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  PACKER_ONLY=0
+  VAGRANT_ONLY=0
+
+  parse_cli_arguments "$@"
   preflight_checks
 
   # Build Packer boxes if this isn't a Vagrant-only build
@@ -507,205 +416,9 @@ main() {
   # Build and Test Vagrant hosts if this isn't a Packer-only build
   if [ "$PACKER_ONLY" -eq 0 ]; then
     build_vagrant_hosts
-    #post_build_checks
+    post_build_checks
   fi
 }
 
-haltmenu() {
-  while [ 1 ]
-  do
-  CHOICE=$(
-  whiptail --title "Security Onion Halt Options" --menu "Make your choice" 16 100 9 \
-  	"1." "Halt Current Env  - Shutdown all machines in current environment"   \
-  	"2." "Halt All Envs     - Shutdown all machines in all environments. This will take a bit."   \
-  	"M." "Menu" \
-  	"Q." "Quit"  3>&2 2>&1 1>&3	
-  )
-  
-  case $CHOICE in
-  	"1.")   
-      CLI_ARGS=("halt")
-      parse_cli_arguments "${CLI_ARGS[@]}"
-  	  main
-      cd $DL_DIR
-      exit 0
-    	;;
-  
-  	"2.")   
-      CLI_ARGS=("halt")
-      parse_cli_arguments "${CLI_ARGS[@]}"
-      cp $DL_DIR/Vagrant/Vagrantfile_Minimal $DL_DIR/Vagrant/Vagrantfile
-  	  main
-      cp $DL_DIR/Vagrant/Vagrantfile_Basic $DL_DIR/Vagrant/Vagrantfile
-  	  main
-      cp $DL_DIR/Vagrant/Vagrantfile_Distributed $DL_DIR/Vagrant/Vagrantfile
-  	  main
-      cp $DL_DIR/Vagrant/Vagrantfile_Lab $DL_DIR/Vagrant/Vagrantfile
-  	  main
-      cp $DL_DIR/Vagrant/Vagrantfile_All $DL_DIR/Vagrant/Vagrantfile
-  	  main
-      cd $DL_DIR
-      exit 0
-    	;;
-  
-  	"M.") menu
-      ;;
-  
-  	"Q.") exit
-      ;;
-  esac
-  exit
-  done
-}
-
-destroymenu() {
-  while [ 1 ]
-  do
-  CHOICE=$(
-  whiptail --title "Security Onion Destroy Options" --menu "Make your choice" 16 100 9 \
-  	"1." "Destroy Current Env  - Destroy all machines in current environment"   \
-  	"2." "Destroy All Envs     - Destroy all machines in all environments. This will take a bit."   \
-  	"M." "Menu" \
-  	"Q." "Quit"  3>&2 2>&1 1>&3	
-  )
-  
-  case $CHOICE in
-  	"1.")   
-      CLI_ARGS=("destroy")
-      parse_cli_arguments "${CLI_ARGS[@]}"
-  	  main
-      cd $DL_DIR
-      exit 0
-    	;;
-  
-  	"2.")   
-      CLI_ARGS=("destroy")
-      parse_cli_arguments "${CLI_ARGS[@]}"
-      cp $DL_DIR/Vagrant/Vagrantfile_Minimal $DL_DIR/Vagrant/Vagrantfile
-  	  main
-      cp $DL_DIR/Vagrant/Vagrantfile_Basic $DL_DIR/Vagrant/Vagrantfile
-  	  main
-      cp $DL_DIR/Vagrant/Vagrantfile_Distributed $DL_DIR/Vagrant/Vagrantfile
-  	  main
-      cp $DL_DIR/Vagrant/Vagrantfile_Lab $DL_DIR/Vagrant/Vagrantfile
-  	  main
-      cp $DL_DIR/Vagrant/Vagrantfile_All $DL_DIR/Vagrant/Vagrantfile
-  	  main
-      cd $DL_DIR
-      exit 0
-    	;;
-  
-  	"M.") menu
-      ;;
-  
-  	"Q.") exit
-      ;;
-  esac
-  exit
-  done
-}
-
-helpmenu() {
-  helpspace="\n                         "
-  helpmessage="1.  Minimal Install     - Single Security Onion Instance (Standalone)$helpspace NAT network$helpspace 2 interfaces: mgmt0 & promisc0$helpspace Setup to use minimal hardware: 2 CPU & 4GB RAM$helpspace Self installing. Ready to go after the initial build!$helpspace WARNING: Suricata NIDS and Bro/Zeek logs ONLY!\n\n"
-  helpmessage+="2.  Standard Install    - Single Security Onion Instance (Standalone)$helpspace NAT network$helpspace 2 interfaces: mgmt0 & promisc0$helpspace Setup to use basic requirements for eval: 4 CPU & 8GB RAM$helpspace Self installing. Ready to go after the initial build!$helpspace Full Elastic pipeline and standard integrations\n\n"
-  helpmessage+="3.  Distributed Demo    - Analyst, Master, Heavy, Forward, pfSense, Apt-Cacher NG, Web, DC$helpspace 172.16.163.0/24 network$helpspace Vanilla installation without any setup$helpspace Learn how a distributed Security Onion installation works$helpspace Integrate any endpoint solution for testing\n\n"
-  helpmessage+="4.  Windows Lab         - Security Onion (Standalone), pfSense, RTO, DC, WEF, Win10$helpspace 172.16.163.0/24 network$helpspace Security Onion setup complete w/Elastic Features enabled$helpspace Red Team Operator machine using Redcloud and educational ransomware,$helpspace Sysmon, Autoruns, Atomic Red Team, Mimikatz installed on Windows$helpspace All Windows logs forwarded to WEF box via GPO$helpspace WEF forwards all logs to Security Onion via Winlogbeat\n\n"
-  helpmessage+="5.  All Machines        - The whole enchilada! Please have at least 64GB of RAM to attempt$helpspace 172.16.163.0/24 network$helpspace Analyst, Master, Heavy, Forward, pfSense,$helpspace Apt-Cacher NG, Web, DC, WEF, Win10$helpspace Mimic an entire network with a single \`vagrant up\`$helpspace IF YOU HAVE THE RESOURCES! NOT FOR THE FAINT OF HEART!"
-  whiptail --msgbox --title "Security Onion Help" "$helpmessage" 39 100 9 3>&2 2>&1 1>&3	
-  menu
-}
-
-menu() {
-  DL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  VAGRANT_ONLY=1
-  PACKER_ONLY=0
-  
-  while [ 1 ]
-  do
-  CHOICE=$(
-  whiptail --title "Security Onion Deployment Options" --menu "Make your choice" 16 100 9 \
-  	"1." "Minimal Install     - Single Security Onion Instance (Standalone)"   \
-  	"2." "Standard Install    - Single Security Onion Instance (Standalone)"  \
-  	"3." "Distributed Demo    - Analyst, Master, Heavy, Forward, pfSense, Apt-Cacher NG, Web, DC" \
-  	"4." "Windows Lab         - Security Onion (Standalone), pfSense, RTO, DC, WEF, Win10" \
-  	"5." "All Machines        - The whole enchilada! Please have at least 64GB of RAM to attempt" \
-  	"6." "Halt Options" \
-  	"99." "Destroy Options" \
-  	"H." "Help" \
-  	"Q." "Quit"  3>&2 2>&1 1>&3	
-  )
-  
-  case $CHOICE in
-  	"1.")   
-      cp $DL_DIR/Vagrant/Vagrantfile_Minimal $DL_DIR/Vagrant/Vagrantfile
-      CLI_ARGS=("up")
-      CLI_ARGS+=("$@")
-      parse_cli_arguments "${CLI_ARGS[@]}"
-  	  main
-      cd $DL_DIR
-      exit 0
-    	;;
-  
-  	"2.")   
-      cp $DL_DIR/Vagrant/Vagrantfile_Basic $DL_DIR/Vagrant/Vagrantfile
-      CLI_ARGS=("up")
-      CLI_ARGS+=("$@")
-      parse_cli_arguments "${CLI_ARGS[@]}"
-  	  main
-      cd $DL_DIR
-      exit 0
-    	;;
-  
-  	"3.")   
-      cp $DL_DIR/Vagrant/Vagrantfile_Distributed $DL_DIR/Vagrant/Vagrantfile
-      CLI_ARGS=("up")
-      CLI_ARGS+=("$@")
-      parse_cli_arguments "${CLI_ARGS[@]}"
-  	  main
-      cd $DL_DIR
-      exit 0
-      ;;
-  
-  	"4.")   
-      cp $DL_DIR/Vagrant/Vagrantfile_Lab $DL_DIR/Vagrant/Vagrantfile
-      CLI_ARGS=("up")
-      CLI_ARGS+=("$@")
-      parse_cli_arguments "${CLI_ARGS[@]}"
-  	  main
-      cd $DL_DIR
-      exit 0
-      ;;
-  
-  	"5.")   
-      cp $DL_DIR/Vagrant/Vagrantfile_All $DL_DIR/Vagrant/Vagrantfile
-      CLI_ARGS=("up")
-      CLI_ARGS+=("$@")
-      parse_cli_arguments "${CLI_ARGS[@]}"
-  	  main
-      cd $DL_DIR
-      exit 0
-      ;;
-  
-  	"6.")   
-      haltmenu
-      ;;
-  
-  	"99.")   
-      destroymenu
-      ;;
-  
-  	"H.")   
-      helpmenu
-      ;;
-  
-  	"Q.") exit
-          ;;
-  esac
-  exit
-  done
-}
-
-menu "$@"
-#main "$@"
-#exit 0
+main "$@"
+exit 0

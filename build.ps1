@@ -52,12 +52,11 @@ Param(
   [string]$ProviderName,
   [string]$PackerPath = 'C:\Hashicorp\packer.exe',
   [switch]$PackerOnly,
-  [switch]$VagrantOnly,
-  [string]$Option
+  [switch]$VagrantOnly
 )
 
 $DL_DIR = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
-$LAB_HOSTS = @()
+$LAB_HOSTS = ('logger', 'dc', 'wef', 'win10')
 
 function install_checker {
   param(
@@ -134,7 +133,7 @@ function check_vmware_workstation_installed {
 
 function check_vmware_vagrant_plugin_installed {
   Write-Host '[check_vmware_vagrant_plugin_installed] Running..'
-  if (vagrant plugin list | Select-String 'vagrant-vmware-workstation') {
+  if (vagrant plugin list | Select-String 'vagrant-vmware-desktop') {
     Write-Host 'The vagrant VMware Workstation plugin is no longer supported.'
     Write-Host 'Please upgrade to the VMware Desktop plugin: https://www.vagrantup.com/docs/vmware/installation.html'
     return $false
@@ -158,26 +157,16 @@ function list_providers {
 
   Write-Host 'Available Providers: '
   if (check_virtualbox_installed) {
-    $VirtualBoxInstalled = $true
-    Write-Host '[*] virtualbox available'
+    Write-Host '[*] virtualbox'
   }
   if (check_vmware_workstation_installed) {
     if (check_vmware_vagrant_plugin_installed) {
-      $VMwareInstalled = $true
-      Write-Host '[*] vmware_desktop available'
+      Write-Host '[*] vmware_desktop'
     }
   }
-  if ((-Not ($VirtualBoxInstalled)) -and (-Not ($VMwareInstalled))) {
+  if ((-Not (check_virtualbox_installed)) -and (-Not (check_vmware_workstation_installed))) {
     Write-Error 'You need to install a provider such as VirtualBox or VMware Workstation to continue.'
     break
-  }
-  if (($VirtualBoxInstalled) -and (-Not ($VMwareInstalled))) {
-    Write-Host '[*] Only VirtualBox found installed. Proceeding with virtualbox as provider.'
-    $ProviderName = 'virtualbox'
-  }
-  if ((-Not ($VirtualBoxInstalled)) -and ($VMwareInstalled)) {
-    Write-Host '[*] Only VMware Workstation found installed. Proceeding with vmware_desktop as provider.'
-    $ProviderName = 'vmware_desktop'
   }
   while (-Not ($ProviderName -eq 'virtualbox' -or $ProviderName -eq 'vmware_desktop')) {
     $ProviderName = Read-Host 'Which provider would you like to use?'
@@ -187,32 +176,6 @@ function list_providers {
     }
   }
   return $ProviderName
-}
-
-function get_lab_hosts {
-  $script:LAB_HOSTS += foreach ($line in Get-Content $DL_DIR\Vagrant\Vagrantfile | Select-String -Pattern '^ {1,}config.vm.define' | Out-String) 
-  {
-    foreach ($box in $line.Trim().Split([Environment]::NewLine)) 
-    {
-      ($box.Trim().Split('"')[1]).Where({ $null -ne $_ })
-    }
-  }
-}
-
-function get_running_hosts {
-  $CurrentDir = Get-Location
-  Set-Location "$DL_DIR\Vagrant"
-  $script:LAB_HOSTS = foreach ($box in ((vagrant status) | Select-String -Pattern "  running"))
-  { 
-    ($box|Out-String).Split(' ')[0].Trim()
-  }
-}
-
-function get_snapshot_list {
-  $CurrentDir = Get-Location
-  Set-Location "$DL_DIR\Vagrant"
-  Write-Host '[snapshot_list] Checking snapshots'
-  $script:SNAPSHOT_LIST = ((vagrant snapshot list) | Get-Unique)
 }
 
 function preflight_checks {
@@ -245,7 +208,7 @@ function preflight_checks {
     Write-Host '[preflight_checks] Checking for vagrant instances..'
     $CurrentDir = Get-Location
     Set-Location "$DL_DIR\Vagrant"
-    if (($(vagrant status) | Select-String -Pattern "created \(|running \(|poweroff \(").Count -ne ($LAB_HOSTS).Count) {
+    if (($(vagrant status) | Select-String -Pattern "not[ _]created").Count -ne 4) {
       Write-Error 'You appear to have already created at least one Vagrant instance. This script does not support already created instances. Please either destroy the existing instances or follow the build steps in the README to continue.'
       break
     }
@@ -277,17 +240,6 @@ function preflight_checks {
       (vagrant plugin install 'vagrant-reload')
       if ($LASTEXITCODE -ne 0) {
         Write-Error 'Unable to install the vagrant-reload plugin. Please try to do so manually and re-run this script.'
-        break
-      }
-    }
-
-    # Ensure the vagrant-vbguest plugin is installed
-    Write-Host '[preflight_checks] Checking if vagrant-vbguest is installed for virtualbox..'
-    if (-Not (vagrant plugin list | Select-String 'vagrant-vbguest')) {
-      Write-Output 'The vagrant-vbguest plugin is required and not currently installed. This script will attempt to install it now.'
-      (vagrant plugin install 'vagrant-vbguest')
-      if ($LASTEXITCODE -ne 0) {
-        Write-Error 'Unable to install the vagrant-vbguest plugin. Please try to do so manually and re-run this script.'
         break
       }
     }
@@ -340,7 +292,7 @@ function vagrant_up_host {
   $CurrentDir = Get-Location
   Set-Location "$DL_DIR\Vagrant"
   set VAGRANT_LOG=info
-  &vagrant.exe @('up', $VagrantHost, '--provider', "$ProviderName") 2>&1 | Out-File -FilePath ".\logs\vagrant_up_$VagrantHost.log"
+  &vagrant.exe @('up', $VagrantHost, '--provider', "$ProviderName") 2>&1 | Out-File -FilePath ".\vagrant_up_$VagrantHost.log"
   Set-Location $CurrentDir
   Write-Host "[vagrant_up_host] Finished for $VagrantHost. Got exit code: $LASTEXITCODE"
   return $LASTEXITCODE
@@ -353,39 +305,9 @@ function vagrant_reload_host {
   Write-Host "[vagrant_reload_host] Running for $VagrantHost"
   $CurrentDir = Get-Location
   Set-Location "$DL_DIR\Vagrant"
-  &vagrant.exe @('reload', $VagrantHost, '--provision') 2>&1 | Out-File -FilePath ".\logs\vagrant_up_$VagrantHost.log" -Append
+  &vagrant.exe @('reload', $VagrantHost, '--provision') 2>&1 | Out-File -FilePath ".\vagrant_up_$VagrantHost.log" -Append
   Set-Location $CurrentDir
   Write-Host "[vagrant_reload_host] Finished for $VagrantHost. Got exit code: $LASTEXITCODE"
-  return $LASTEXITCODE
-}
-
-function vagrant_halt_host {
-  param(
-    [string]$VagrantHost
-  )
-  Write-Host "[vagrant_halt_host] Running for $VagrantHost"
-  Write-Host "Attempting to shutdown the $VagrantHost host using Vagrant"
-  $CurrentDir = Get-Location
-  Set-Location "$DL_DIR\Vagrant"
-  set VAGRANT_LOG=info
-  &vagrant.exe @('halt', $VagrantHost) 2>&1 | Out-File -FilePath ".\logs\vagrant_halt_$VagrantHost.log"
-  Set-Location $CurrentDir
-  Write-Host "[vagrant_halt_host] Finished for $VagrantHost. Got exit code: $LASTEXITCODE"
-  return $LASTEXITCODE
-}
-
-function vagrant_destroy_host {
-  param(
-    [string]$VagrantHost
-  )
-  Write-Host "[vagrant_destroy_host] Running for $VagrantHost"
-  Write-Host "Attempting to delete the $VagrantHost host using Vagrant"
-  $CurrentDir = Get-Location
-  Set-Location "$DL_DIR\Vagrant"
-  set VAGRANT_LOG=info
-  &vagrant.exe @('destroy', '-f', $VagrantHost) 2>&1 | Out-File -FilePath ".\logs\vagrant_destroy_$VagrantHost.log"
-  Set-Location $CurrentDir
-  Write-Host "[vagrant_destroy_host] Finished for $VagrantHost. Got exit code: $LASTEXITCODE"
   return $LASTEXITCODE
 }
 
@@ -430,15 +352,15 @@ function download {
 function post_build_checks {
 
   Write-Host '[post_build_checks] Running Splunk Check.'
-  #$SPLUNK_CHECK = download -URL 'https://172.16.163.105:8000/en-US/account/login?return_to=%2Fen-US%2F' -PatternToMatch 'This browser is not supported by Splunk'
+  $SPLUNK_CHECK = download -URL 'https://192.168.38.105:8000/en-US/account/login?return_to=%2Fen-US%2F' -PatternToMatch 'This browser is not supported by Splunk'
   Write-Host "[post_build_checks] Splunk Result: $SPLUNK_CHECK"
 
   Write-Host '[post_build_checks] Running Fleet Check.'
-  #$FLEET_CHECK = download -URL 'https://172.16.163.105:8412' -PatternToMatch 'Kolide Fleet'
+  $FLEET_CHECK = download -URL 'https://192.168.38.105:8412' -PatternToMatch 'Kolide Fleet'
   Write-Host "[post_build_checks] Fleet Result: $FLEET_CHECK"
 
   Write-Host '[post_build_checks] Running MS ATA Check.'
-  #$ATA_CHECK = download -URL 'https://172.16.163.103' -SuccessOn401
+  $ATA_CHECK = download -URL 'https://192.168.38.103' -SuccessOn401
   Write-Host "[post_build_checks] ATA Result: $ATA_CHECK"
 
   if ($SPLUNK_CHECK -eq $false) {
@@ -452,462 +374,53 @@ function post_build_checks {
   }
 }
 
-function main {
-  param(
-    [Parameter(Position=0)]
-    [string]$VagrantAction,
-    [Parameter(Position=1)]
-    [string]$SnapshotAction
-  )
+# If no ProviderName was provided, get a provider
+if ($ProviderName -eq $Null -or $ProviderName -eq "") {
+  $ProviderName = list_providers
+}
 
-  get_lab_hosts
+# Set Provider variable for use deployment functions
+if ($ProviderName -eq 'vmware_desktop') {
+  $PackerProvider = 'vmware'
+}
+else {
+  $PackerProvider = 'virtualbox'
+}
 
-  if ($VagrantAction -eq 'up') {
-    # Run check functions
-    preflight_checks
-  
-    # If no ProviderName was provided, get a provider
-    if ($ProviderName -eq $Null -or $ProviderName -eq "") {
-      $ProviderName = list_providers
-    }
-  
-    # Set Provider variable for use deployment functions
-    if ($ProviderName -eq 'vmware_desktop') {
-      $PackerProvider = 'vmware'
+# Run check functions
+preflight_checks
+
+# Build Packer Boxes
+if (!($VagrantOnly)) {
+  packer_build_box -Box 'windows_2016'
+  packer_build_box -Box 'windows_10'
+  # Move Packer Boxes
+  move_boxes
+}
+
+if (!($PackerOnly)) {
+  # Vagrant up each box and attempt to reload one time if it fails
+  forEach ($VAGRANT_HOST in $LAB_HOSTS) {
+    Write-Host "[main] Running vagrant_up_host for: $VAGRANT_HOST"
+    $result = vagrant_up_host -VagrantHost $VAGRANT_HOST
+    Write-Host "[main] vagrant_up_host finished. Exitcode: $result"
+    if ($result -eq '0') {
+      Write-Output "Good news! $VAGRANT_HOST was built successfully!"
     }
     else {
-      $PackerProvider = 'virtualbox'
+      Write-Warning "Something went wrong while attempting to build the $VAGRANT_HOST box."
+      Write-Output "Attempting to reload and reprovision the host..."
+      Write-Host "[main] Running vagrant_reload_host for: $VAGRANT_HOST"
+      $retryResult = vagrant_reload_host -VagrantHost $VAGRANT_HOST
+      if ($retryResult -ne 0) {
+        Write-Error "Failed to bring up $VAGRANT_HOST after a reload. Exiting"
+        break
+      }
     }
-
-    # Build Packer Boxes
-    if (!($VagrantOnly)) {
-      packer_build_box -Box 'windows_2016'
-      packer_build_box -Box 'windows_10'
-      # add packer_build_box for securityonion and pfsense
-      # Move Packer Boxes
-      move_boxes
-    }
-  
-    if (!($PackerOnly)) {
-        # Vagrant up each box and attempt to reload one time if it fails
-        forEach ($VAGRANT_HOST in $LAB_HOSTS) {
-          Write-Host "[main] Running vagrant_up_host for: $VAGRANT_HOST"
-          $result = vagrant_up_host -VagrantHost $VAGRANT_HOST
-          Write-Host "[main] vagrant_up_host finished. Exitcode: $result"
-          if ($result -eq '0') {
-            Write-Output "Good news! $VAGRANT_HOST was built successfully!"
-          }
-          else {
-            Write-Warning "Something went wrong while attempting to build the $VAGRANT_HOST box."
-            Write-Output "Attempting to reload and reprovision the host..."
-            Write-Host "[main] Running vagrant_reload_host for: $VAGRANT_HOST"
-            $retryResult = vagrant_reload_host -VagrantHost $VAGRANT_HOST
-            if ($retryResult -ne 0) {
-              Write-Error "Failed to bring up $VAGRANT_HOST after a reload. Exiting"
-              break
-            }
-          }
-          Write-Host "[main] Finished for: $VAGRANT_HOST"
-        }
-     }
+    Write-Host "[main] Finished for: $VAGRANT_HOST"
   }
-  elseif ($VagrantAction -eq 'halt') {
-    Write-Host "[main] Checking current environment for running hosts"
-    get_running_hosts
-    forEach ($VAGRANT_HOST in $LAB_HOSTS) {
-      Write-Host "[main] Running vagrant_halt_host for: $VAGRANT_HOST"
-      $result = vagrant_halt_host -VagrantHost $VAGRANT_HOST
-      Write-Host "[main] vagrant_halt_host finished. Exitcode: $result"
-      if ($result -eq '0') {
-        Write-Output "Good news! $VAGRANT_HOST was stopped successfully!"
-      }
-      else {
-        Write-Warning "Something went wrong while attempting to stop the $VAGRANT_HOST box."
-        Write-Output "Attempting to stop the host again..."
-        Write-Host "[main] Running vagrant_halt_host for: $VAGRANT_HOST"
-        $retryResult = vagrant_halt_host -VagrantHost $VAGRANT_HOST
-        if ($retryResult -ne 0) {
-          Write-Error "Failed to stop $VAGRANT_HOST after second attempt. Exiting"
-          break
-        }
-      }
-      Write-Host "[main] Finished for: $VAGRANT_HOST"
-    }
-  }
-  elseif ($VagrantAction -eq 'snapshot') {
-    Write-Host "[main] Checking current environment for snapshots"
-    get_snapshot_list
-    if ($SnapshotAction -eq 'list') {
-      if ( $script:SNAPSHOT_LIST | Select-String -Pattern "No snapshots have been taken yet" ) {
-      Write-Error "No snapshots have been taken in current environment"
-      #Write-Host $script:SNAPSHOT_LIST
-      break
-      }
-    }
-    break
-    forEach ($VAGRANT_HOST in $LAB_HOSTS) {
-      Write-Host "[main] Running vagrant_halt_host for: $VAGRANT_HOST"
-      $result = vagrant_halt_host -VagrantHost $VAGRANT_HOST
-      Write-Host "[main] vagrant_halt_host finished. Exitcode: $result"
-      if ($result -eq '0') {
-        Write-Output "Good news! $VAGRANT_HOST was stopped successfully!"
-      }
-      else {
-        Write-Warning "Something went wrong while attempting to stop the $VAGRANT_HOST box."
-        Write-Output "Attempting to stop the host again..."
-        Write-Host "[main] Running vagrant_halt_host for: $VAGRANT_HOST"
-        $retryResult = vagrant_halt_host -VagrantHost $VAGRANT_HOST
-        if ($retryResult -ne 0) {
-          Write-Error "Failed to stop $VAGRANT_HOST after second attempt. Exiting"
-          break
-        }
-      }
-      Write-Host "[main] Finished for: $VAGRANT_HOST"
-    }
-  }
-  elseif ($VagrantAction -eq 'destroy') {
-    Write-Host "[main] Checking current environment for any hosts"
-    get_lab_hosts
-    forEach ($VAGRANT_HOST in $LAB_HOSTS) {
-      Write-Host "[main] Running vagrant_destroy_host for: $VAGRANT_HOST"
-      $result = vagrant_destroy_host -VagrantHost $VAGRANT_HOST
-      Write-Host "[main] vagrant_destroy_host finished. Exitcode: $result"
-      if ($result -eq '0') {
-        Write-Output "Good news! $VAGRANT_HOST was deleted successfully!"
-      }
-      else {
-        Write-Warning "Something went wrong while attempting to delete the $VAGRANT_HOST box."
-        Write-Output "Attempting to delete the host again..."
-        Write-Host "[main] Running vagrant_destroy_host for: $VAGRANT_HOST"
-        $retryResult = vagrant_destroy_host -VagrantHost $VAGRANT_HOST
-        if ($retryResult -ne 0) {
-          Write-Error "Failed to delete $VAGRANT_HOST after second attempt. Exiting"
-          break
-        }
-      }
-      Write-Host "[main] Finished for: $VAGRANT_HOST"
-    }
-  }
-  
-    # Update accordingly
-    #Write-Host "[main] Running post_build_checks"
-    #post_build_checks
-    #Write-Host "[main] Finished post_build_checks"
+
+  Write-Host "[main] Running post_build_checks"
+  post_build_checks
+  Write-Host "[main] Finished post_build_checks"
 }
-
-function SnapshotMenu{
-  Clear-Host
-  Do
-  {
-    Write-Host -Object '*******************************'
-    Write-Host -Object "Security Onion Snapshot Options" -ForegroundColor Blue
-    Write-Host -Object '*******************************'
-    Write-Host -Object ''
-    Write-Host -Object '1.  List Snapshots      - List snapshots within current environment'
-    Write-Host -Object ''
-    Write-Host -Object '2.  Take A Snapshot     - Take a snapshot of the current environment'
-    Write-Host -Object ''
-    Write-Host -Object 'M.  Menu'
-    Write-Host -Object ''
-    Write-Host -Object 'Q.  Quit'
-    $Snapshot = Read-Host -Prompt '(1-2, M to Main Menu, or Q to Quit)'
-
-    switch($Snapshot) {
-      1
-      {
-        $VagrantOnly = $true
-        main 'snapshot' 'list'
-        Set-Location "$DL_DIR"
-        Exit
-      }
-      2
-      {
-        $VagrantOnly = $true
-        Set-Location "$DL_DIR"
-        Exit
-      }
-      M
-      {
-        Menu
-        Exit
-      }
-      Q
-      {
-        cd $DL_DIR
-        Exit
-      }
-    }
-  }  
-  until ($Snapshot -eq 'q')
-}
-
-function HaltMenu{
-  Clear-Host
-  Do
-  {
-    Write-Host -Object '***************************'
-    Write-Host -Object "Security Onion Halt Options" -ForegroundColor Blue
-    Write-Host -Object '***************************'
-    Write-Host -Object ''
-    Write-Host -Object '1.  Halt Current Env  - Destroy all machines in current environment'
-    Write-Host -Object ''
-    Write-Host -Object '2.  Halt All Envs     - Destroy machines in all environments'
-    Write-Host -Object ''
-    Write-Host -Object 'M.  Menu'
-    Write-Host -Object ''
-    Write-Host -Object 'Q.  Quit'
-    $HaltMenu = Read-Host -Prompt '(1-2, M to Main Menu, or Q to Quit)'
-
-    switch($HaltMenu) {
-      1
-      {
-        $VagrantOnly = $true
-        main 'halt'
-        Remove-Item $DL_DIR\Vagrant\Vagrantfile
-        Set-Location "$DL_DIR"
-        Exit
-      }
-      2
-      {
-        $VagrantOnly = $true
-        Copy-Item $DL_DIR\Vagrant\Vagrantfile_Minimal $DL_DIR\Vagrant\Vagrantfile
-        main 'halt'
-        Copy-Item $DL_DIR\Vagrant\Vagrantfile_Basic $DL_DIR\Vagrant\Vagrantfile
-        main 'halt'
-        Copy-Item $DL_DIR\Vagrant\Vagrantfile_Distributed $DL_DIR\Vagrant\Vagrantfile
-        main 'halt'
-        Copy-Item $DL_DIR\Vagrant\Vagrantfile_Lab $DL_DIR\Vagrant\Vagrantfile
-        main 'halt'
-        Copy-Item $DL_DIR\Vagrant\Vagrantfile_All $DL_DIR\Vagrant\Vagrantfile
-        main 'halt'
-        Remove-Item $DL_DIR\Vagrant\Vagrantfile
-        Set-Location "$DL_DIR"
-        Exit
-      }
-      M
-      {
-        Clear-Host
-        Menu
-        Exit
-      }
-      Q
-      {
-        cd $DL_DIR
-        Clear-Host
-        Exit
-      }
-    }
-  }  
-  until ($HaltMenu -eq 'q')
-}
-
-function DestroyMenu{
-  Clear-Host
-  Do
-  {
-    Write-Host -Object '******************************'
-    Write-Host -Object "Security Onion Destroy Options" -ForegroundColor Blue
-    Write-Host -Object '******************************'
-    Write-Host -Object ''
-    Write-Host -Object '1.  Destroy Current Env  - Destroy all machines in current environment'
-    Write-Host -Object ''
-    Write-Host -Object '2.  Destroy All Envs     - Destroy machines in all environments'
-    Write-Host -Object ''
-    Write-Host -Object 'M.  Menu'
-    Write-Host -Object ''
-    Write-Host -Object 'Q.  Quit'
-    $DestroyMenu = Read-Host -Prompt '(1-2, M to Main Menu, or Q to Quit)'
-
-    switch($DestroyMenu) {
-      1
-      {
-        $VagrantOnly = $true
-        main 'destroy'
-        Remove-Item $DL_DIR\Vagrant\Vagrantfile
-        Set-Location "$DL_DIR"
-        Exit
-      }
-      2
-      {
-        $VagrantOnly = $true
-        Copy-Item $DL_DIR\Vagrant\Vagrantfile_Minimal $DL_DIR\Vagrant\Vagrantfile
-        main 'destroy'
-        Copy-Item $DL_DIR\Vagrant\Vagrantfile_Basic $DL_DIR\Vagrant\Vagrantfile
-        main 'destroy'
-        Copy-Item $DL_DIR\Vagrant\Vagrantfile_Distributed $DL_DIR\Vagrant\Vagrantfile
-        main 'destroy'
-        Copy-Item $DL_DIR\Vagrant\Vagrantfile_Lab $DL_DIR\Vagrant\Vagrantfile
-        main 'destroy'
-        Copy-Item $DL_DIR\Vagrant\Vagrantfile_All $DL_DIR\Vagrant\Vagrantfile
-        main 'destroy'
-        Remove-Item $DL_DIR\Vagrant\Vagrantfile
-        Set-Location "$DL_DIR"
-        Exit
-      }
-      M
-      {
-        Clear-Host
-        Menu
-        Exit
-      }
-      Q
-      {
-        cd $DL_DIR
-        Clear-Host
-        Exit
-      }
-    }
-  }  
-  until ($DestroyMenu -eq 'q')
-}
-
-function Menu {
-  Clear-Host
-  Do
-  # TODO:
-  #  - add HH setup
-  #  - add One stop SOC setup
-  #  - add pagination (to help menu first)
-  #  - Vagrantfile must exist
-  #  - 99 runs delete twice (not on error but legit 0)
-  {
-    if ( !$Option -or $Option -gt 5 ) {
-    Write-Host -Object '*********************************'
-    Write-Host -Object "Security Onion Deployment Options" -ForegroundColor Blue
-    Write-Host -Object '*********************************'
-    Write-Host -Object ''
-    Write-Host -Object '1.  Minimal Install     - Single Security Onion Instance (Standalone)'
-    Write-Host -Object ''
-    Write-Host -Object '2.  Standard Install    - Single Security Onion Instance (Standalone)'
-    Write-Host -Object ''
-    Write-Host -Object '3.  Distributed Demo    - Analyst, Master, Heavy, Forward, pfSense, Apt-Cacher NG, Web, DC'
-    Write-Host -Object ''
-    Write-Host -Object '4.  Windows Lab         - Security Onion (Standalone), pfSense, RTO, DC, WEF, Win10'
-    Write-Host -Object ''
-    Write-Host -Object '5.  All Machines        - The whole enchilada! Please have at least 64GB of RAM to attempt'
-    Write-Host -Object ''
-    Write-Host -Object '6.  Halt Options'
-    Write-Host -Object ''
-    Write-Host -Object '99. Destroy Options'
-    Write-Host -Object ''
-    Write-Host -Object 'H.  Help'
-    Write-Host -Object ''
-    Write-Host -Object 'Q.  Quit'
-    $Option = Read-Host -Prompt '(1-5, 6 to halt, 99 to destroy, H for Help, or Q to Quit)'
-    }
-
-    switch($Option) {
-      1
-      {
-        $VagrantOnly = $true
-        Copy-Item $DL_DIR\Vagrant\Vagrantfile_Minimal $DL_DIR\Vagrant\Vagrantfile
-        main 'up'
-        Set-Location "$DL_DIR"
-        Exit
-      }
-      2
-      {
-        $VagrantOnly = $true
-        Copy-Item $DL_DIR\Vagrant\Vagrantfile_Basic $DL_DIR\Vagrant\Vagrantfile
-        main 'up'
-        Set-Location "$DL_DIR"
-        Exit
-      }
-      3
-      {
-        $VagrantOnly = $true
-        Copy-Item $DL_DIR\Vagrant\Vagrantfile_Distributed $DL_DIR\Vagrant\Vagrantfile
-        main 'up'
-        Set-Location "$DL_DIR"
-        Exit
-      }
-      4
-      {
-        $VagrantOnly = $true
-        Copy-Item $DL_DIR\Vagrant\Vagrantfile_Lab $DL_DIR\Vagrant\Vagrantfile
-        main 'up'
-        Set-Location "$DL_DIR"
-        Exit
-      }
-      5
-      {
-        $VagrantOnly = $true
-        Copy-Item $DL_DIR\Vagrant\Vagrantfile_All $DL_DIR\Vagrant\Vagrantfile
-        main 'up'
-        Set-Location "$DL_DIR"
-        Exit
-      }
-      6
-      {
-        HaltMenu
-      }
-      7
-      {
-        SnapshotMenu
-      }
-      99
-      {
-        DestroyMenu
-      }
-      H
-      {
-        Write-Host -Object '*******************'
-        Write-Host -Object "Security Onion Help" -ForegroundColor Blue
-        Write-Host -Object '*******************'
-        Write-Host -Object ''
-        Write-Host -Object '1.  Minimal Install     - Single Security Onion Instance (Standalone)'
-        Write-Host -Object '                          NAT network'
-        Write-Host -Object '                          2 interfaces: mgmt0 & promisc0'
-        Write-Host -Object '                          Setup to use minimal hardware: 2 CPU & 4GB RAM'
-        Write-Host -Object '                          Self installing. Ready to go after the initial build!'
-        Write-Host -Object '                          WARNING: Suricata NIDS and Bro/Zeek logs ONLY!'
-        Write-Host -Object ''
-        Write-Host -Object '2.  Standard Install    - Single Security Onion Instance (Standalone)'
-        Write-Host -Object '                          NAT network'
-        Write-Host -Object '                          2 interfaces: mgmt0 & promisc0'
-        Write-Host -Object '                          Setup to use basic requirements for eval: 4 CPU & 8GB RAM'
-        Write-Host -Object '                          Self installing. Ready to go after the initial build!'
-        Write-Host -Object '                          Full Elastic pipeline and standard integrations'
-        Write-Host -Object ''
-        Write-Host -Object '3.  Distributed Demo    - Analyst, Master, Heavy, Forward, pfSense, Apt-Cacher NG, Web, DC'
-        Write-Host -Object '                          172.16.163.0/24 network'
-        Write-Host -Object '                          Vanilla installation without any setup'
-        Write-Host -Object '                          Learn how a distributed Security Onion installation works'
-        Write-Host -Object '                          Integrate any endpoint solution for testing'
-        Write-Host -Object ''
-        Write-Host -Object '4.  Windows Lab         - Security Onion (Standalone), pfSense, RTO, DC, WEF, Win10'
-        Write-Host -Object '                          172.16.163.0/24 network'
-        Write-Host -Object '                          Security Onion setup complete w/Elastic Features enabled'
-        Write-Host -Object '                          Red Team Operator machine using Redcloud and educational ransomware'
-        Write-Host -Object '                          Sysmon, Autoruns, Atomic Red Team, Mimikatz installed on Windows'
-        Write-Host -Object '                          All Windows logs forwarded to WEF box via GPO'
-        Write-Host -Object '                          WEF forwards all logs to Security Onion via Winlogbeat'
-        Write-Host -Object ''
-        Write-Host -Object '5.  All Machines        - The whole enchilada! Please have at least 64GB of RAM to attempt'
-        Write-Host -Object '                          172.16.163.0/24 network'
-        Write-Host -Object '                          Analyst, Master, Heavy, Forward, pfSense,'
-        Write-Host -Object '                          Apt-Cacher NG, Web, DC, WEF, Win10'
-        Write-Host -Object '                          Mimic an entire network with a single `vagrant up`'
-        Write-Host -Object '                          IF YOU HAVE THE RESOURCES! NOT FOR THE FAINT OF HEART!'
-        Write-Host -Object ''
-        Write-Host -Object '6.  Halt Menu           - Choose to shut down current env or all running envs'
-        Write-Host -Object ''
-        Write-Host -Object '99. Destroy Menu        - Choose to destroy current env or all machines in every env'
-        Pause
-        Clear-Host
-      }
-      Q
-      {
-        cd $DL_DIR
-        Clear-Host
-        Exit
-      }
-    }
-  }  
-  until ($Option -eq 'q')
-}
-
-# Call selection menu here for boxes based on Vagrantfile
-Menu
-Clear-Host
-break
