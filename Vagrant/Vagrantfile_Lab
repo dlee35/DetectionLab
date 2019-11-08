@@ -37,7 +37,7 @@ Vagrant.configure("2") do |config|
   config.vm.define "lab-rto" do |cfg|
     cfg.vm.box = "bento/ubuntu-16.04"
     cfg.vm.hostname = "rto"
-    config.vm.provision :shell, path: "bootstrap.sh"
+    cfg.vm.provision :shell, path: "bootstrap.sh"
 
     cfg.vm.provider "vmware_desktop" do |v, override|
       override.vm.synced_folder ".", "/vagrant", type: "rsync"
