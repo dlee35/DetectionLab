@@ -36,8 +36,7 @@ fix_vagrant_ip() {
 }
 
 fix_promisc_nic() {
-  HOST=$(hostname)
-  if [[ "$HOST" == *"sosensor"* || "$HOST" == *"solab" ]]; then
+  if [[ "$HOSTNAME" == *"sosensor"* || "$HOSTNAME" == *"solab" ]]; then
     ETH_PROMISC=$(ip link | grep -E 'ens34|enp0s8|eth1' | cut -f 2 -d\: | tr -d [:space:])
     echo "" >> /etc/network/interfaces
     echo "auto $ETH_PROMISC" >> /etc/network/interfaces
@@ -58,8 +57,7 @@ fix_static_ip() {
   if grep -q 'Security Onion setup' /etc/network/interfaces; then
     echo "Interfaces already configured... Skipping"
   else
-    HOST=$(hostname)
-    if [[ "$HOST" != *"securityonion" && "$HOST" != *"sominimal" ]]; then
+    if [[ "$HOSTNAME" != *"securityonion" && "$HOSTNAME" != *"sominimal" ]]; then
       # Fix mgmt nic if the IP isn't set correctly
       ETH_IP=$(ip link | grep -E 'ens33|enp0s3|eth0' | cut -f 2 -d\: | tr -d [:space:])
       MGMT_IP=$(ifconfig $ETH_IP | grep 'inet addr' | cut -d ':' -f 2 | cut -d ' ' -f 1)
@@ -70,18 +68,18 @@ fix_static_ip() {
         echo "" >> /etc/network/interfaces
         echo "auto $ETH_IP" >> /etc/network/interfaces
         echo "iface $ETH_IP inet static" >> /etc/network/interfaces
-        if [[ "$HOST" == *"somaster" ]]; then
+        if [[ "$HOSTNAME" == *"somaster" ]]; then
           echo "  address 172.16.163.200" >> /etc/network/interfaces
-        elif [[ "$HOST" == *"sostorage01" ]]; then
+        elif [[ "$HOSTNAME" == *"sostorage01" ]]; then
           echo "  address 172.16.163.215" >> /etc/network/interfaces
-        elif [[ "$HOST" == *"sosensor01" ]]; then
+        elif [[ "$HOSTNAME" == *"sosensor01" ]]; then
           echo "  address 172.16.163.210" >> /etc/network/interfaces
-        elif [[ "$HOST" == *"sosensor02" ]]; then
+        elif [[ "$HOSTNAME" == *"sosensor02" ]]; then
           echo "  address 172.16.163.220" >> /etc/network/interfaces
-        elif [[ "$HOST" == *"soanalyst01" ]]; then
+        elif [[ "$HOSTNAME" == *"soanalyst01" ]]; then
           echo "  address 172.16.163.101" >> /etc/network/interfaces
           cp /usr/share/securityonion/securityonion_setup.jpg /usr/share/securityonion.jpg
-        elif [[ "$HOST" == *"solab" ]]; then
+        elif [[ "$HOSTNAME" == *"solab" ]]; then
           echo "  address 172.16.163.225" >> /etc/network/interfaces
         fi
         echo "  netmask 255.255.255.0" >> /etc/network/interfaces
@@ -97,8 +95,7 @@ fix_static_ip() {
 }
 
 setup_testing() {
-  HOST=$(hostname)
-  if [[ "$HOST" != *"securityonion" && "$HOST" != *"solab" ]]; then
+  if [[ "$HOSTNAME" != *"securityonion" && "$HOSTNAME" != *"solab" ]]; then
     # Add test files if in dev mode
     if [ -f /vagrant/resources/securityonion/00proxy ]; then
       cp /vagrant/resources/securityonion/00proxy /etc/apt/apt.conf.d/00proxy
@@ -121,15 +118,14 @@ enable_features() {
   if grep -q 'securityonionsolutionselas' /etc/nsm/elasticdownload.conf; then
     echo "Elastic Features already enabled... Skipping"
   else
-    HOST=$(hostname)
-    if [ "$HOST" == "securityonion" ]; then
+    if [ "$HOSTNAME" == "securityonion" ]; then
       sed -i 's/securityonionsolutions/securityonionsolutionselas/' /etc/nsm/elasticdownload.conf
     fi
   fi
 }
 
 setup_analyst
-setup_testing
-enable_features
+#setup_testing
+#enable_features
 fix_vagrant_ip
 fix_static_ip

@@ -14,8 +14,7 @@ setup_test_repo() {
 }
 
 enable_features() {
-  HOST=$(hostname)
-  if [[ "$HOST" == *"solab" ]]; then
+  if [[ "$HOSTNAME" == *"solab" ]]; then
     # Enable Elastic Features
     if grep -q 'securityonionsolutionselas' /etc/nsm/elasticdownload.conf; then
       echo "Elastic Features already enabled... Skipping"
@@ -26,20 +25,16 @@ enable_features() {
 }
 
 install_securityonion() {
-  HOST=$(hostname)
   if [ ! -f /etc/nsm/servertab ]; then
     # Place any testing you'd like here
     echo "Beginning standalone installation of Security Onion"
-    if [[ "$HOST" == *"solab" ]]; then
+    if [[ "$HOSTNAME" == *"solab" ]]; then
       echo yes | /usr/sbin/sosetup -f /vagrant/resources/securityonion/lab-standalone.conf
-      # Copy over 6000 series scripts for host logs being worked on
-      cp /vagrant/resources/securityonion/6*.conf /etc/logstash/custom/
-      /usr/sbin/so-logstash-restart
-      # Add firewall rule for host (like whitelist)
+      # Add firewall rule for beats host
       echo "Adding firewall rule for WEF beats"
       sed -i '/containers/a -I DOCKER-USER ! -i docker0 -o docker0 -s 172.16.163.212 -p tcp --dport 5044 -j ACCEPT\n' /etc/ufw/after.rules
       systemctl restart ufw
-    elif [[ "$HOST" == *"securityonion" ]]; then
+    elif [[ "$HOSTNAME" == *"securityonion" ]]; then
       sed -i 's/\(^\tADVANCED_SETUP\=\)\"1\"/\1"0"/' /usr/sbin/sosetup
       sed -i 's/^reboot/#reboot/' /usr/sbin/sosetup-network
       sed -i 's/^\t\(read\ input\)/\t#\1/' /usr/sbin/sosetup-network
@@ -48,7 +43,7 @@ install_securityonion() {
       sed -i 's/^#reboot/reboot/' /usr/sbin/sosetup-network
       sed -i 's/^\t#\(read\ input\)/\t\1/' /usr/sbin/sosetup-network
       sed -i 's/\(^\tADVANCED_SETUP\=\)\"0\"/\1"1"/' /usr/sbin/sosetup
-    elif [[ "$HOST" == *"sominimal" ]]; then
+    elif [[ "$HOSTNAME" == *"sominimal" ]]; then
       sed -i 's/^reboot/#reboot/' /usr/sbin/sosetup-network
       sed -i 's/^\t\(read\ input\)/\t#\1/' /usr/sbin/sosetup-network
       echo yes | /usr/sbin/sosetup -f /vagrant/resources/securityonion/base-standalone.conf

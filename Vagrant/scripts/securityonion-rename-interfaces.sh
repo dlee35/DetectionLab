@@ -1,9 +1,8 @@
 #!/bin/bash
 
 if [ ! -f /etc/udev/rules.d/70-persistent-net.rules ]; then
-  HOST=$(hostname)
   echo "Renaming interfaces for consistency"
-  if [[ "$HOST" == *"securityonion" || "$HOST" == *"sominimal" ]]; then
+  if [[ "$HOSTNAME" == *"securityonion" || "$HOSTNAME" == *"sominimal" ]]; then
     for NIC in $(ip link | grep -E 'ens|eth[0-9]{1,}|enp'| cut -d\: -f2 ); do
         # VMware Workstation naming
         if [ "$NIC" == "ens192"  ]; then
