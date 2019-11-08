@@ -27,28 +27,30 @@ apt_install_prerequisites() {
     cp -av securityonion-latest/* /var/www/html/
   fi
   if [[ "$HOST" == *"rto" ]]; then
-    apt-get install -y ca-certificates curl software-properties-common git
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
-    add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-    apt-get update
-    apt-get install -y docker-ce python3-pip
-    usermod -aG docker vagrant
-    curl -L "https://github.com/docker/compose/releases/download/1.22.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    chmod +x /usr/local/bin/docker-compose
-    curl -sL https://deb.nodesource.com/setup_10.x -o nodesource_setup.sh
-    bash nodesource_setup.sh
-    apt-get install -y nodejs
-    npm install ngrok && cp ~/node_modules/ngrok/bin/ngrok /usr/sbin/
-    wget https://raw.githubusercontent.com/tedsluis/tmux.conf/master/.tmux.conf -O /home/vagrant/.tmux.conf
-    systemctl enable docker && systemctl start docker
-    git clone https://github.com/mauri870/ransomware /opt/ransomware
-    git clone https://github.com/khast3x/redcloud /opt/redcloud
-    chown -R vagrant.vagrant /opt/ransomware /opt/redcloud /home/vagrant/.tmux.conf
-    cd /opt/redcloud && pip3 install -r requirements.txt
-    # Second echo for exit status 0
-    echo '1' | python3 redcloud.py; echo "Success!"
-    # There seems to be an issue w/cert-gen (or something). Hoping re-instantiating the containers corrects it.
-    /usr/local/bin/docker-compose up -d
+    if [ ! -f /opt/redcloud/docker-compose.yml ]; then
+      apt-get install -y ca-certificates curl software-properties-common git
+      curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+      add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+      apt-get update
+      apt-get install -y docker-ce python3-pip
+      usermod -aG docker vagrant
+      curl -L "https://github.com/docker/compose/releases/download/1.22.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+      chmod +x /usr/local/bin/docker-compose
+      curl -sL https://deb.nodesource.com/setup_10.x -o nodesource_setup.sh
+      bash nodesource_setup.sh
+      apt-get install -y nodejs
+      npm install ngrok && cp ~/node_modules/ngrok/bin/ngrok /usr/sbin/
+      wget https://raw.githubusercontent.com/tedsluis/tmux.conf/master/.tmux.conf -O /home/vagrant/.tmux.conf
+      systemctl enable docker && systemctl start docker
+      git clone https://github.com/mauri870/ransomware /opt/ransomware
+      git clone https://github.com/khast3x/redcloud /opt/redcloud
+      chown -R vagrant.vagrant /opt/ransomware /opt/redcloud /home/vagrant/.tmux.conf
+      cd /opt/redcloud && pip3 install -r requirements.txt
+      # Second echo for exit status 0
+      echo '1' | python3 redcloud.py; echo "Success!"
+      # There seems to be an issue w/cert-gen (or something). Hoping re-instantiating the containers corrects it.
+      /usr/local/bin/docker-compose up -d
+    fi
   fi
 }
 
