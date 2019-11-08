@@ -51,6 +51,7 @@ winlogbeat.event_logs:
   - name: WEC4-Windows-Updates
   - name: WEC4-Wireless
   - name: WEC5-Autoruns
+    tags: ["autorunstowin"]
   - name: WEC5-Certificate-Authority
   - name: WEC5-Crypto-API
   - name: WEC5-Log-Deletion-Security
