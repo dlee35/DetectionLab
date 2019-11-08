@@ -63,11 +63,11 @@ alter_etc_profile() {
     echo "docker-compose up -d" >> /etc/profile
     echo "popd" >> /etc/profile
     echo "}" >> /etc/profile
-    echo "echo \"Starting RedCloud Containers...\""
+    echo "echo \"Starting RedCloud Containers...\"" >> /etc/profile
     echo "start_portainer >/dev/null" >> /etc/profile
-    echo "echo -e \"\n##############################################################\"" >> /etc/profile
+    echo "echo -e \"\n#########################################################################\"" >> /etc/profile
     echo "echo \"You may access the RTO web interface at https://$(ifconfig eth0|grep 'inet addr:'|cut -d':' -f2 | awk '{print $1}')/portainer\"" >> /etc/profile
-    echo "echo -e \"##############################################################\n\"" >> /etc/profile
+    echo "echo -e \"#########################################################################\n\"" >> /etc/profile
   fi
 }
 

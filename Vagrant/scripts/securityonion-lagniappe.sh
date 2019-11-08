@@ -31,7 +31,7 @@ alter_etc_profile() {
     echo "Info already added to /etc/profile"
   else
     echo "echo -e \"\n#########################################################################\"" >> /etc/profile
-    echo "echo \"You may access the Security Onion web interface at https://$(ifconfig ens33|grep 'inet addr:'|cut -d':' -f2 | awk '{print $1}')\"" >> /etc/profile
+    echo "echo \"You may access the Security Onion web interface at https://$(ifconfig vagrant0|grep 'inet addr:'|cut -d':' -f2 | awk '{print $1}')\"" >> /etc/profile
     echo "echo -e \"#########################################################################\n\"" >> /etc/profile
   fi
 }

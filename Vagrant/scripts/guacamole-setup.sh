@@ -10,6 +10,16 @@ install_guacamole() {
   fi
 }
 
+alter_etc_profile() {
+  if grep -q 'You may access' /etc/profile; then
+    echo "Info already added to /etc/profile"
+  else
+    echo "echo -e \"\n##############################################################################\"" >> /etc/profile
+    echo "echo \"You may access the Guacamole web interface at https://$(ifconfig eth0|grep 'inet addr:'|cut -d':' -f2 | awk '{print $1}')\"" >> /etc/profile
+    echo "echo -e \"##############################################################################\n\"" >> /etc/profile
+  fi
+}
+
 fix_static_ip() {
   if grep -q 'Guacamole setup' /etc/network/interfaces; then
     echo "Interfaces already configured... Skipping"
@@ -58,5 +68,6 @@ allow_firewall() {
 }
 
 install_guacamole
+alter_etc_profile
 allow_firewall
 fix_static_ip
