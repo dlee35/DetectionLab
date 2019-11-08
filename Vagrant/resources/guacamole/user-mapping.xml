@@ -17,7 +17,7 @@
     <authorize username="analyst" password="analyst">
         <connection name="Red Team Operator SSH">
         <protocol>ssh</protocol>
-        <param name="hostname">172.16.163.222</param>
+        <param name="hostname">172.16.163.224</param>
         <param name="port">22</param>
         <param name="username">vagrant</param>
         <param name="password">vagrant</param>
