@@ -143,7 +143,7 @@ fi
 #TOMCAT=""
 
 # Install features
-echo -e "${BLUE}Installing dependencies. This might take a few minutes...${NC}"
+echo -e "${NC}Installing dependencies. This might take a few minutes...${NC}"
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -161,7 +161,7 @@ fi
 
 # Set SERVER to be the preferred download server from the Apache CDN
 SERVER="http://apache.org/dyn/closer.cgi?action=download&filename=guacamole/${GUACVERSION}"
-echo -e "${BLUE}Downloading Files...${NC}"
+echo -e "${NC}Downloading Files...${NC}"
 
 # Download Guacamole Server
 wget -q --show-progress -O guacamole-server-${GUACVERSION}.tar.gz ${SERVER}/source/guacamole-server-${GUACVERSION}.tar.gz
@@ -213,9 +213,9 @@ mkdir -p /etc/guacamole/extensions
 # Install guacd
 cd guacamole-server-${GUACVERSION}
 
-echo -e "${BLUE}Building Guacamole with GCC $(gcc --version | head -n1 | grep -oP '\)\K.*' | awk '{print $1}') ${NC}"
+echo -e "${NC}Building Guacamole with GCC $(gcc --version | head -n1 | grep -oP '\)\K.*' | awk '{print $1}') ${NC}"
 
-echo -e "${BLUE}Configuring. This might take a minute...${NC}"
+echo -e "${NC}Configuring. This might take a minute...${NC}"
 ./configure --with-init-dir=/etc/init.d  &>> ${LOG}
 if [ $? -ne 0 ]; then
     echo -e "${RED}Failed. See ${LOG}${NC}"
@@ -224,7 +224,7 @@ else
     echo -e "${GREEN}OK${NC}"
 fi
 
-echo -e "${BLUE}Running Make. This might take a few minutes...${NC}"
+echo -e "${NC}Running Make. This might take a few minutes...${NC}"
 make &>> ${LOG}
 if [ $? -ne 0 ]; then
     echo -e "${RED}Failed. See ${LOG}${NC}"
@@ -233,7 +233,7 @@ else
     echo -e "${GREEN}OK${NC}"
 fi
 
-echo -e "${BLUE}Running Make Install...${NC}"
+echo -e "${NC}Running Make Install...${NC}"
 make install &>> ${LOG}
 if [ $? -ne 0 ]; then
     echo -e "${RED}Failed. See ${LOG}${NC}"
@@ -269,7 +269,7 @@ echo "mysql-username: ${mysqluser}" >> /etc/guacamole/guacamole.properties
 echo "mysql-password: ${guacdbuserpassword}" >> /etc/guacamole/guacamole.properties
 
 # restart tomcat
-echo -e "${BLUE}Restarting tomcat...${NC}"
+echo -e "${NC}Restarting tomcat...${NC}"
 
 service ${TOMCAT} restart
 if [ $? -ne 0 ]; then
@@ -305,7 +305,7 @@ fi
 service guacd start
 
 # Cleanup
-echo -e "${BLUE}Cleanup install files...${NC}"
+echo -e "${NC}Cleanup install files...${NC}"
 
 rm -rf guacamole-*
 if [ $? -ne 0 ]; then
@@ -315,4 +315,4 @@ else
     echo -e "${GREEN}OK${NC}"
 fi
 
-echo -e "${BLUE}Installation Complete\nhttp://localhost:8080/guacamole/\nDefault login guacadmin:guacadmin\nBe sure to change the password.${NC}"
+echo -e "${NC}Installation Complete\nhttp://localhost:8080/guacamole/\nDefault login guacadmin:guacadmin\nBe sure to change the password.${NC}"
