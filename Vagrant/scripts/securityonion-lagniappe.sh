@@ -26,8 +26,19 @@ copy_bpf_custom() {
   fi
 }
 
+alter_etc_profile() {
+  if grep -q 'You may access' /etc/profile; then
+    echo "Info already added to /etc/profile"
+  else
+    echo "echo -e \"\n#########################################################################\"" >> /etc/profile
+    echo "echo \"You may access the Security Onion web interface at https://$(ifconfig ens33|grep 'inet addr:'|cut -d':' -f2 | awk '{print $1}')\"" >> /etc/profile
+    echo "echo -e \"#########################################################################\n\"" >> /etc/profile
+  fi
+}
+
 if [[ $HOSTNAME == *"solab" ]]; then
   copy_logstash_custom
   copy_bro_custom
   copy_bpf_custom
+  alter_etc_profile
 fi

@@ -54,6 +54,23 @@ apt_install_prerequisites() {
   fi
 }
 
+alter_etc_profile() {
+  if grep -q 'You may access' /etc/profile; then
+    echo "Info already added to /etc/profile"
+  else
+    echo "start_portainer() {" >> /etc/profile
+    echo "pushd /opt/redcloud/" >> /etc/profile
+    echo "docker-compose up -d" >> /etc/profile
+    echo "popd" >> /etc/profile
+    echo "}" >> /etc/profile
+    echo "echo \"Starting RedCloud Containers...\""
+    echo "start_portainer >/dev/null" >> /etc/profile
+    echo "echo -e \"\n##############################################################\"" >> /etc/profile
+    echo "echo \"You may access the RTO web interface at https://$(ifconfig eth0|grep 'inet addr:'|cut -d':' -f2 | awk '{print $1}')/portainer\"" >> /etc/profile
+    echo "echo -e \"##############################################################\n\"" >> /etc/profile
+  fi
+}
+
 fix_eth1_static_ip() {
   # There's a fun issue where dhclient keeps messing with eth1 despite the fact
   # that eth1 has a static IP set. We workaround this by setting a static DHCP lease.
@@ -378,6 +395,7 @@ install_suricata() {
 
 main() {
   apt_install_prerequisites
+  alter_etc_profile
   fix_eth1_static_ip
   #install_python
   #install_splunk
